@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -109,9 +110,23 @@ func (p *HifiProvider) GetTrack(ctx context.Context, id string) (*domain.Catalog
 	return resp.ToDomain(p), nil
 }
 
+func (p *HifiProvider) resolveTrackID(ctx context.Context, trackID string, isrc string) string {
+	if isrc == "" {
+		return trackID
+	}
+
+	searchURL := fmt.Sprintf("%s/search/?s=%s", p.BaseURL, url.QueryEscape(isrc))
+	var resp APITracksSearchResponse
+	if err := p.get(ctx, searchURL, &resp); err == nil && len(resp.Data.Items) > 0 {
+		return formatID(resp.Data.Items[0].ID)
+	}
+
+	return trackID
+}
+
 func (p *HifiProvider) GetStream(ctx context.Context, trackID string, isrc string, quality string) (io.ReadCloser, string, error) {
-	// isrc is unused — Tidal resolves by trackID
-	u := fmt.Sprintf("%s/track/?id=%s&quality=%s", p.BaseURL, trackID, quality)
+	tid := p.resolveTrackID(ctx, trackID, isrc)
+	u := fmt.Sprintf("%s/track/?id=%s&quality=%s", p.BaseURL, tid, quality)
 
 	var resp APIStreamResponse
 	if err := p.get(ctx, u, &resp); err != nil {

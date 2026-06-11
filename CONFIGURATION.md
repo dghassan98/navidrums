@@ -85,6 +85,7 @@ Managing providers:
 - **Primary provider**: Sets the default HiFi URL via `PROVIDER_URL` environment variable
 - **Settings UI**: Add, reorder (drag), edit, delete provider URLs per type; select which provider type per operation
 - **Fallback within type**: Multiple URLs of the same type are tried in position order until one succeeds
+- **Cross-provider fallback**: For streaming and downloads, if the primary provider type fails all its URLs, the other provider type is tried automatically. When ISRC is missing from the stream request, it is enriched from track metadata before retrying the primary or falling back to the secondary provider.
 
 ## Validation
 

@@ -166,13 +166,28 @@ func (p *QobuzProvider) resolveTrackID(ctx context.Context, trackID string, isrc
 	if isrc != "" {
 		var lookupResp QobuzTrackLookupResponse
 		lookupURL := fmt.Sprintf("%s/get-track?isrc=%s", p.BaseURL, url.QueryEscape(isrc))
-		if err := p.get(ctx, lookupURL, &lookupResp); err != nil {
-			return 0, fmt.Errorf("qobuz isrc lookup failed: %w", err)
+		err := p.get(ctx, lookupURL, &lookupResp)
+		if err == nil && lookupResp.Success && lookupResp.Data != nil && lookupResp.Data.ID != 0 {
+			return lookupResp.Data.ID, nil
 		}
-		if !lookupResp.Success || lookupResp.Data == nil || lookupResp.Data.ID == 0 {
-			return 0, fmt.Errorf("qobuz track not found for isrc: %s", isrc)
+
+		var searchResp QobuzSearchResponse
+		searchURL := fmt.Sprintf("%s/get-music?q=%s&offset=0", p.BaseURL, url.QueryEscape(isrc))
+		if searchErr := p.get(ctx, searchURL, &searchResp); searchErr == nil && searchResp.Success {
+			for _, t := range searchResp.Data.Tracks.Items {
+				if t.ISRC == isrc && t.ID > 0 {
+					return t.ID, nil
+				}
+			}
 		}
-		return lookupResp.Data.ID, nil
+
+		if tid, parseErr := strconv.Atoi(trackID); parseErr == nil && tid > 0 {
+			return tid, nil
+		}
+		if err != nil {
+			return 0, fmt.Errorf("qobuz isrc lookup failed (no fallback available): %w", err)
+		}
+		return 0, fmt.Errorf("qobuz track not found for isrc: %s", isrc)
 	}
 
 	tid, err := strconv.Atoi(trackID)
@@ -210,6 +225,15 @@ func (p *QobuzProvider) get(ctx context.Context, targetURL string, result interf
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		bodyStr := string(body)
+		if len(bodyStr) > 200 {
+			bodyStr = bodyStr[:200]
+		}
+		return fmt.Errorf("API returned status %d: %s", resp.StatusCode, bodyStr)
+	}
 
 	decoder := json.NewDecoder(resp.Body)
 	return decoder.Decode(result)

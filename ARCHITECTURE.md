@@ -86,6 +86,8 @@ web/                  # Embedded UI templates and assets
 - Music catalog interface with multi-provider support
 - ProviderManager: three independent provider chains (metadata, download, streaming)
 - FallbackProvider: tries multiple URLs of same type in order
+- CrossProviderFallback: wraps streaming/download chains with cross-type fallback
+  - When primary provider fails, enriches ISRC from track metadata, retries primary with ISRC, then tries secondary provider
 - CachedProvider: decorator wrapping each chain
 - Stream fetching with provider selection per operation
 

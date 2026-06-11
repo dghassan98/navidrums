@@ -71,6 +71,7 @@ func TestAPIArtistAggregationResponse_ToTopTracks(t *testing.T) {
 		} "json:\"artist\""
 		ID            json.Number      "json:\"id\""
 		Title         string           "json:\"title\""
+		ISRC          string           "json:\"isrc\""
 		AudioQuality  string           "json:\"audioQuality\""
 		MediaMetadata APIMediaMetadata "json:\"mediaMetadata\""
 		TrackNumber   int              "json:\"trackNumber\""
@@ -79,6 +80,7 @@ func TestAPIArtistAggregationResponse_ToTopTracks(t *testing.T) {
 		{
 			ID:           json.Number("101"),
 			Title:        "Track 1",
+			ISRC:         "USABC1234567",
 			TrackNumber:  1,
 			Duration:     200,
 			AudioQuality: constants.QualityHigh,
@@ -107,6 +109,9 @@ func TestAPIArtistAggregationResponse_ToTopTracks(t *testing.T) {
 	}
 	if tracks[0].Album != "Album" {
 		t.Errorf("Expected Album 'Album', got %s", tracks[0].Album)
+	}
+	if tracks[0].ISRC != "USABC1234567" {
+		t.Errorf("Expected ISRC 'USABC1234567', got %s", tracks[0].ISRC)
 	}
 }
 

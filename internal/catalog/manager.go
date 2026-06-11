@@ -89,11 +89,25 @@ func (m *ProviderManager) GetMetadataProvider() Provider {
 }
 
 func (m *ProviderManager) GetDownloadProvider() Provider {
-	return m.GetProvider(m.readSetting(store.SettingActiveDownloadProvider))
+	primary := m.readSetting(store.SettingActiveDownloadProvider)
+	return m.getCrossProvider(primary)
+}
+
+func (m *ProviderManager) getCrossProvider(primary ProviderType) Provider {
+	chain := m.GetProvider(primary)
+
+	fallbackType := oppositeProviderType(primary)
+	if m.hasProvidersOfType(fallbackType) {
+		fallbackChain := m.GetProvider(fallbackType)
+		return &crossProviderFallback{primary: chain, fallback: fallbackChain}
+	}
+
+	return chain
 }
 
 func (m *ProviderManager) GetStreamingProvider() Provider {
-	return m.GetProvider(m.readSetting(store.SettingActiveStreamingProvider))
+	primary := m.readSetting(store.SettingActiveStreamingProvider)
+	return m.getCrossProvider(primary)
 }
 
 func (m *ProviderManager) InvalidateAllCaches() {

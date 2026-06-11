@@ -39,6 +39,7 @@ func (r APIArtistAggregationResponse) ToTopTracks(p *HifiProvider) []domain.Cata
 		tracks = append(tracks, domain.CatalogTrack{
 			ID:           formatID(item.ID),
 			Title:        item.Title,
+			ISRC:         item.ISRC,
 			ArtistID:     formatID(item.Artist.ID),
 			Artist:       item.Artist.Name,
 			AlbumID:      formatID(item.Album.ID),
@@ -461,6 +462,7 @@ func (r APITracksSearchResponse) ToDomain(p *HifiProvider) []domain.CatalogTrack
 		tracks = append(tracks, domain.CatalogTrack{
 			ID:             formatID(item.ID),
 			Title:          item.Title,
+			ISRC:           item.ISRC,
 			ArtistID:       artistIDs[0],
 			Artist:         artists[0],
 			Artists:        artists,

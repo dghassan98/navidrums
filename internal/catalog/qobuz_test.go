@@ -386,6 +386,86 @@ func TestQobuzGetStream_MissingStreamURL(t *testing.T) {
 	}
 }
 
+func TestQobuzResolveTrackID_SearchFallback(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/get-music" {
+			json.NewEncoder(w).Encode(QobuzSearchResponse{
+				Success: true,
+				Data: QobuzSearchData{
+					Query: "UYB282636622",
+					Tracks: QobuzSearchTracks{
+						Items: []QobuzTrackItem{
+							{ID: 416711618, Title: "EL MUNDO X TI", ISRC: "UYB282636622", Performer: QobuzPerformer{ID: 1, Name: "Rels B"}},
+						},
+					},
+				},
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("not found"))
+	}))
+	defer srv.Close()
+
+	t.Run("fallback to search when get-track fails", func(t *testing.T) {
+		p := NewQobuzProvider(srv.URL)
+
+		tid, err := p.resolveTrackID(context.Background(), "", "UYB282636622")
+		if err != nil {
+			t.Fatalf("resolveTrackID failed: %v", err)
+		}
+		if tid != 416711618 {
+			t.Errorf("resolveTrackID = %d, want 416711618", tid)
+		}
+	})
+
+	t.Run("search with empty results falls back to numeric", func(t *testing.T) {
+		srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/get-music" {
+				json.NewEncoder(w).Encode(QobuzSearchResponse{
+					Success: true,
+					Data: QobuzSearchData{
+						Query:  "NOTFOUND",
+						Tracks: QobuzSearchTracks{Items: nil},
+					},
+				})
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("not found"))
+		}))
+		defer srv2.Close()
+
+		p := NewQobuzProvider(srv2.URL)
+
+		tid, err := p.resolveTrackID(context.Background(), "42", "NOTFOUND")
+		if err != nil {
+			t.Fatalf("resolveTrackID failed: %v", err)
+		}
+		if tid != 42 {
+			t.Errorf("resolveTrackID = %d, want 42", tid)
+		}
+	})
+
+	t.Run("search non-200 falls back to numeric", func(t *testing.T) {
+		srv3 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("503"))
+		}))
+		defer srv3.Close()
+
+		p := NewQobuzProvider(srv3.URL)
+
+		tid, err := p.resolveTrackID(context.Background(), "99", "ANYISRC")
+		if err != nil {
+			t.Fatalf("resolveTrackID failed: %v", err)
+		}
+		if tid != 99 {
+			t.Errorf("resolveTrackID = %d, want 99", tid)
+		}
+	})
+}
+
 func TestQobuzSearch_FiltersByType(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(QobuzSearchResponse{
@@ -450,6 +530,72 @@ func TestQobuzSearch_FiltersByType(t *testing.T) {
 			t.Error("expected no albums when filtering by track")
 		}
 	})
+}
+
+func TestQobuzGet_Non200Status_ReturnsClearError(t *testing.T) {
+	t.Run("404 HTML response produces status error, not JSON parse error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("<html><body>Not Found</body></html>"))
+		}))
+		defer srv.Close()
+
+		p := NewQobuzProvider(srv.URL)
+		_, err := p.GetTrack(context.Background(), "1")
+		if err == nil {
+			t.Fatal("expected error for 404 response")
+		}
+		if errMsg := err.Error(); !contains(errMsg, "404") {
+			t.Errorf("expected error to mention status 404, got: %s", errMsg)
+		}
+	})
+
+	t.Run("401 JSON response produces status error with body", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"unauthorized"}`))
+		}))
+		defer srv.Close()
+
+		p := NewQobuzProvider(srv.URL)
+		_, err := p.GetTrack(context.Background(), "1")
+		if err == nil {
+			t.Fatal("expected error for 401 response")
+		}
+		if errMsg := err.Error(); !contains(errMsg, "401") {
+			t.Errorf("expected error to mention status 401, got: %s", errMsg)
+		}
+	})
+
+	t.Run("502 HTML response from ISRC lookup produces status error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte("<html>502 Bad Gateway</html>"))
+		}))
+		defer srv.Close()
+
+		p := NewQobuzProvider(srv.URL)
+		_, _, err := p.GetStream(context.Background(), "1", "USABC1234567", "LOSSLESS")
+		if err == nil {
+			t.Fatal("expected error for 502 response")
+		}
+		if errMsg := err.Error(); !contains(errMsg, "502") {
+			t.Errorf("expected error to mention status 502, got: %s", errMsg)
+		}
+	})
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && containsStr(s, substr)
+}
+
+func containsStr(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 func TestQobuzGetTrack_Success(t *testing.T) {
