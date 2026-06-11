@@ -185,6 +185,7 @@ type APIArtistAggregationResponse struct {
 		} `json:"artist"`
 		ID            json.Number      `json:"id"`
 		Title         string           `json:"title"`
+		ISRC          string           `json:"isrc"`
 		AudioQuality  string           `json:"audioQuality"`
 		MediaMetadata APIMediaMetadata `json:"mediaMetadata"`
 		TrackNumber   int              `json:"trackNumber"`
@@ -305,6 +306,7 @@ type APISearchTrackItem struct {
 	} `json:"album"`
 	ID            json.Number      `json:"id"`
 	Title         string           `json:"title"`
+	ISRC          string           `json:"isrc"`
 	AudioQuality  string           `json:"audioQuality"`
 	MediaMetadata APIMediaMetadata `json:"mediaMetadata"`
 	Artists       []APIArtist      `json:"artists"`
