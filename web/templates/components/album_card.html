@@ -1,7 +1,7 @@
 <div class="card">
     <div class="card-img-wrapper">
         <a href="/album/{{.ID}}">
-            <img src="{{if .AlbumArtURL}}{{.AlbumArtURL}}{{else}}https://via.placeholder.com/300?text=No+Cover{{end}}"
+            <img src="{{if .AlbumArtURL}}{{.AlbumArtURL}}{{else}}/static/img/placeholder.svg{{end}}"
                 alt="{{.Title}}" loading="lazy">
         </a>
         <button class="btn btn-primary btn-sm card-img-overlay" onclick="queueDownload(event, 'album', '{{.ID}}', this)" title="Download Album">

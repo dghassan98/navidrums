@@ -6,7 +6,7 @@
         {{range .}}
         <div class="card">
             <a href="/artist/{{.ID}}">
-                <img src="{{if .PictureURL}}{{.PictureURL}}{{else}}https://via.placeholder.com/300?text=Artist{{end}}"
+                <img src="{{if .PictureURL}}{{.PictureURL}}{{else}}/static/img/placeholder.svg{{end}}"
                     alt="{{.Name}}" loading="lazy">
             </a>
             <div class="card-title" title="{{.Name}}"><a href="/artist/{{.ID}}">{{.Name}}</a></div>

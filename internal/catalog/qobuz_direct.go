@@ -188,7 +188,31 @@ func (p *QobuzDirectProvider) GetArtist(ctx context.Context, id string) (*domain
 		return nil, fmt.Errorf("qobuz artist not found: %s", id)
 	}
 
-	return resp.ToDomain(), nil
+	artist := resp.ToDomain()
+
+	// artist/get has no top tracks and sometimes no portrait; artist/page has
+	// both. Treat it as optional so a failure there still yields the artist.
+	if page, pageErr := p.artistPage(ctx, id); pageErr == nil {
+		artist.TopTracks = page.ToTopTracks()
+		if artist.PictureURL == "" {
+			artist.PictureURL = page.PortraitURL()
+		}
+	}
+
+	return artist, nil
+}
+
+// artistPage fetches the richer artist view used by the Qobuz web player.
+func (p *QobuzDirectProvider) artistPage(ctx context.Context, id string) (*QobuzArtistPageResponse, error) {
+	params := url.Values{}
+	params.Set("artist_id", id)
+	params.Set("sort", "release_date")
+
+	var resp QobuzArtistPageResponse
+	if err := p.authedGet(ctx, "artist/page", params, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (p *QobuzDirectProvider) GetPlaylist(ctx context.Context, id string) (*domain.Playlist, error) {

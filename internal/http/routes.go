@@ -57,6 +57,14 @@ type RecommendationsData struct {
 	ArtistRecommendations []interface{}
 }
 
+// HasAny reports whether any lane produced results, so an empty panel is never
+// cached and a fresh seed can be tried instead.
+func (d *RecommendationsData) HasAny() bool {
+	return len(d.TrackRecommendations) > 0 ||
+		len(d.AlbumRecommendations) > 0 ||
+		len(d.ArtistRecommendations) > 0
+}
+
 func (h *Handler) LuckyHTMX(w http.ResponseWriter, r *http.Request) {
 	h.recsMutex.RLock()
 	if h.cachedRecs != nil && time.Since(h.cachedRecsTime) < 5*time.Minute {
@@ -67,17 +75,49 @@ func (h *Handler) LuckyHTMX(w http.ResponseWriter, r *http.Request) {
 	}
 	h.recsMutex.RUnlock()
 
-	seeds, err := h.DownloadsService.GetRecommendationSeeds()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	var data RecommendationsData
+
+	// A seed picked at random can be an artist Qobuz knows nothing about, which
+	// renders an empty panel. Try a few different seeds before giving up.
+	for attempt := 0; attempt < recommendationSeedAttempts; attempt++ {
+		seeds, err := h.DownloadsService.GetRecommendationSeeds()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if seeds == nil {
+			_, _ = w.Write([]byte("<p>No downloads found. Download some music first!</p>"))
+			return
+		}
+
+		data = h.gatherRecommendations(r, seeds)
+		if data.HasAny() {
+			break
+		}
+
+		h.Logger.Info("Recommendation seeds returned nothing, trying another",
+			"attempt", attempt+1, "track_id", seeds.TrackID, "album_id", seeds.AlbumID, "artist_id", seeds.ArtistID)
 	}
 
-	if seeds == nil {
-		_, _ = w.Write([]byte("<p>No downloads found. Download some music first!</p>"))
-		return
+	// Only cache something worth showing: caching an empty result would keep
+	// the panel blank for the whole TTL.
+	if data.HasAny() {
+		h.recsMutex.Lock()
+		h.cachedRecs = &data
+		h.cachedRecsTime = time.Now()
+		h.recsMutex.Unlock()
 	}
 
+	h.RenderFragment(w, "recommendations.html", data)
+}
+
+// recommendationSeedAttempts caps how many random seeds are tried before the
+// panel is rendered empty.
+const recommendationSeedAttempts = 3
+
+// gatherRecommendations fetches all three recommendation lanes concurrently.
+func (h *Handler) gatherRecommendations(r *http.Request, seeds *app.RecommendationSeeds) RecommendationsData {
 	data := RecommendationsData{
 		TrackSeed:  seeds,
 		AlbumSeed:  seeds,
@@ -93,13 +133,11 @@ func (h *Handler) LuckyHTMX(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			h.Logger.Info("Fetching track recommendations", "track_id", seeds.TrackID)
 			tracks, err := provider.GetRecommendations(r.Context(), seeds.TrackID)
 			if err != nil {
 				trackErr = err
 				return
 			}
-			h.Logger.Info("Track recommendations response", "track_id", seeds.TrackID, "count", len(tracks))
 			var iface []interface{}
 			for i := range tracks {
 				iface = append(iface, tracks[i])
@@ -112,13 +150,11 @@ func (h *Handler) LuckyHTMX(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			h.Logger.Info("Fetching album recommendations", "album_id", seeds.AlbumID)
 			albums, err := provider.GetSimilarAlbums(r.Context(), seeds.AlbumID)
 			if err != nil {
 				albumErr = err
 				return
 			}
-			h.Logger.Info("Album recommendations response", "album_id", seeds.AlbumID, "count", len(albums))
 			var iface []interface{}
 			for i := range albums {
 				iface = append(iface, albums[i])
@@ -131,13 +167,11 @@ func (h *Handler) LuckyHTMX(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			h.Logger.Info("Fetching artist recommendations", "artist_id", seeds.ArtistID)
 			artists, err := provider.GetSimilarArtists(r.Context(), seeds.ArtistID)
 			if err != nil {
 				artistErr = err
 				return
 			}
-			h.Logger.Info("Artist recommendations response", "artist_id", seeds.ArtistID, "count", len(artists))
 			var iface []interface{}
 			for i := range artists {
 				iface = append(iface, artists[i])
@@ -149,15 +183,11 @@ func (h *Handler) LuckyHTMX(w http.ResponseWriter, r *http.Request) {
 	wg.Wait()
 
 	if trackErr != nil || albumErr != nil || artistErr != nil {
-		h.Logger.Error("Failed to get recommendations", "track_error", trackErr, "album_error", albumErr, "artist_error", artistErr)
+		h.Logger.Error("Failed to get recommendations",
+			"track_error", trackErr, "album_error", albumErr, "artist_error", artistErr)
 	}
 
-	h.recsMutex.Lock()
-	h.cachedRecs = &data
-	h.cachedRecsTime = time.Now()
-	h.recsMutex.Unlock()
-
-	h.RenderFragment(w, "recommendations.html", data)
+	return data
 }
 
 func (h *Handler) ArtistPage(w http.ResponseWriter, r *http.Request) {

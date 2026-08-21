@@ -228,3 +228,31 @@ func firstNonBlank(values ...string) string {
 
 // qobuzArtistImageBase is where hash/format artist pictures are hosted.
 const qobuzArtistImageBase = "https://static.qobuz.com/images/artists/"
+
+// QobuzArtistPageResponse is the artist/page envelope. artist/get carries no
+// top tracks at all, so an artist page built from it alone always reported
+// "0 top tracks"; this route supplies them, plus a portrait when artist/get
+// has none.
+type QobuzArtistPageResponse struct {
+	ID        int                 `json:"id"`
+	Name      QobuzNameObject     `json:"name"`
+	Images    QobuzArtistImages   `json:"images"`
+	TopTracks []QobuzTopTrackItem `json:"top_tracks"`
+}
+
+// PortraitURL returns the artist portrait, or "" when Qobuz holds none.
+func (r *QobuzArtistPageResponse) PortraitURL() string {
+	if r.Images.Portrait == nil || r.Images.Portrait.Hash == "" {
+		return ""
+	}
+	return qobuzArtistImageBase + r.Images.Portrait.Hash + "." + r.Images.Portrait.Format
+}
+
+// ToTopTracks converts the page's top tracks into catalog tracks.
+func (r *QobuzArtistPageResponse) ToTopTracks() []domain.CatalogTrack {
+	tracks := make([]domain.CatalogTrack, 0, len(r.TopTracks))
+	for i := range r.TopTracks {
+		tracks = append(tracks, r.TopTracks[i].ToDomain())
+	}
+	return tracks
+}
