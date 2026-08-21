@@ -2,18 +2,6 @@
 <h1>Settings</h1>
 
 <div class="section">
-    <h2>MONOCHROME Instances</h2>
-    <p class="hint">Monochrome API instances used for metadata, downloads, and streaming. Tried in order, so
-        add a few as fallbacks. Default: <code>https://lol.samidy.workers.dev</code></p>
-    <div id="monochrome-provider-list" class="flex flex-col gap-2"></div>
-    <form class="provider-form mt-4" onsubmit="addProvider(event, 'monochrome')">
-        <input type="text" id="monochrome-provider-name" placeholder="Name" required>
-        <input type="url" id="monochrome-provider-url" placeholder="URL" required>
-        <button type="submit" class="btn-lg btn-primary">+ Add</button>
-    </form>
-</div>
-
-<div class="section">
     <h2>Settings Access</h2>
     <p class="hint" id="admin-lock-hint"></p>
     <div class="toolbar-row">
@@ -144,6 +132,18 @@
     <form class="provider-form mt-4" onsubmit="addProvider(event, 'qobuz-direct')">
         <input type="text" id="qobuz-direct-provider-name" placeholder="Name" required>
         <input type="url" id="qobuz-direct-provider-url" placeholder="URL" required>
+        <button type="submit" class="btn-lg btn-primary">+ Add</button>
+    </form>
+</div>
+
+<div class="section">
+    <h2>MONOCHROME Instances</h2>
+    <p class="hint">Monochrome API instances used for metadata, downloads, and streaming. Tried in order, so
+        add a few as fallbacks. Default: <code>https://lol.samidy.workers.dev</code></p>
+    <div id="monochrome-provider-list" class="flex flex-col gap-2"></div>
+    <form class="provider-form mt-4" onsubmit="addProvider(event, 'monochrome')">
+        <input type="text" id="monochrome-provider-name" placeholder="Name" required>
+        <input type="url" id="monochrome-provider-url" placeholder="URL" required>
         <button type="submit" class="btn-lg btn-primary">+ Add</button>
     </form>
 </div>
