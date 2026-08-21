@@ -116,8 +116,9 @@ Without it the image reports `dev`, which is itself a useful signal that the bui
 
 Set `NAVIDRUMS_ADMIN_PASSWORD` to password protect the Settings page. The gate covers the page **and** every
 endpoint that reads or changes settings, so it cannot be bypassed by calling the API directly. Unlocking sets
-an HttpOnly cookie valid for 12 hours; it is an HMAC keyed by the password, so changing the password
-immediately invalidates every existing session. "Lock settings" in the UI ends the session early.
+an HttpOnly session cookie, so Settings re-locks when the browser closes and again after
+`NAVIDRUMS_ADMIN_SESSION_TTL` (default 30 minutes), which is enforced server side. The cookie is an HMAC keyed
+by the password, so changing the password immediately invalidates every existing session. "Lock settings" in the UI ends the session early.
 
 Leaving the variable unset leaves Settings open, which is the previous behaviour. This is separate from
 `NAVIDRUMS_PASSWORD`, which protects the whole application.

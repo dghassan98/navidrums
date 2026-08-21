@@ -9,6 +9,15 @@ import (
 	"github.com/cesargomez89/navidrums/internal/store"
 )
 
+// writeNotifyError replies with a JSON error, which is what the Settings page
+// parses. A plain-text body here surfaced in the UI as a JSON parse failure
+// rather than the actual problem.
+func writeNotifyError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
 // notifyWebhookURL resolves the webhook the same way the worker does: a value
 // saved in Settings wins over NOTIFY_URL.
 func (h *Handler) notifyWebhookURL() string {
@@ -81,13 +90,13 @@ func (h *Handler) SetNotificationsHTMX(w http.ResponseWriter, r *http.Request) {
 		URL string `json:"url"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeNotifyError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	value := strings.TrimSpace(body.URL)
 	if value != "" && !strings.HasPrefix(value, "http://") && !strings.HasPrefix(value, "https://") {
-		http.Error(w, "Webhook must be an http(s) URL", http.StatusBadRequest)
+		writeNotifyError(w, http.StatusBadRequest, "Webhook must start with http:// or https://")
 		return
 	}
 
@@ -99,7 +108,7 @@ func (h *Handler) SetNotificationsHTMX(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		h.Logger.Error("Failed to save webhook", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		writeNotifyError(w, http.StatusInternalServerError, "Could not save the webhook")
 		return
 	}
 
@@ -111,9 +120,14 @@ func (h *Handler) SetNotificationsHTMX(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) TestNotificationHTMX(w http.ResponseWriter, r *http.Request) {
 	webhook := h.notifyWebhookURL()
 	if webhook == "" {
-		http.Error(w, "No webhook configured", http.StatusBadRequest)
+		writeNotifyError(w, http.StatusBadRequest,
+			"No webhook configured. Save one above, or set NOTIFY_URL in the environment.")
 		return
 	}
+
+	// Logged either way, so the server log alone shows whether the button's
+	// request even arrived and what the webhook made of it.
+	h.Logger.Info("Sending test notification", "kind", webhookKind(webhook))
 
 	notifier := notify.New(func() string { return webhook }, h.Logger)
 	event := notify.Event{
@@ -126,11 +140,10 @@ func (h *Handler) TestNotificationHTMX(w http.ResponseWriter, r *http.Request) {
 
 	if err := notifier.Send(r.Context(), webhook, event); err != nil {
 		h.Logger.Error("Test notification failed", "error", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		writeNotifyError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 
+	h.Logger.Info("Test notification accepted by webhook")
 	_, _ = w.Write([]byte(`{"success":true}`))
 }

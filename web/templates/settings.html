@@ -764,6 +764,23 @@
                     document.getElementById(id).value = '';
                 });
             
+
+    function escapeText(value) {
+        return String(value).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+    }
+
+    // Reads a response whether it answered with JSON or plain text, so an
+    // unexpected body surfaces the real reason instead of a parse error.
+    function readResult(response) {
+        return response.text().then(text => {
+            let parsed = null;
+            try { parsed = text ? JSON.parse(text) : null; } catch (e) { /* not json */ }
+            if (response.ok) return parsed;
+            const reason = (parsed && parsed.error) || text || ('HTTP ' + response.status);
+            return Promise.reject(reason);
+        });
+    }
+
     function loadNotifySettings() {
         fetch('/htmx/notifications', { cache: 'no-store' })
             .then(r => r.json())
@@ -793,11 +810,11 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: value }),
         })
-            .then(r => r.ok ? r.json() : r.text().then(t => Promise.reject(t)))
+            .then(readResult)
             .then(() => { el.value = ''; loadNotifySettings(); })
             .catch(err => {
                 document.getElementById('notify-status').innerHTML =
-                    '<p class="text-danger">Failed to save: ' + err + '</p>';
+                    '<p class="text-danger">Failed to save: ' + escapeText(err) + '</p>';
             });
     }
 
@@ -805,12 +822,12 @@
         const box = document.getElementById('notify-status');
         box.innerHTML = '<p class="hint">Sending test notification...</p>';
         fetch('/htmx/notifications/test', { method: 'POST' })
-            .then(r => r.ok ? r.json().then(() => null) : r.json().then(j => Promise.reject(j.error || 'failed')))
+            .then(readResult)
             .then(() => {
                 box.innerHTML = '<p class="text-success">Test sent. Check your channel.</p>';
             })
             .catch(err => {
-                box.innerHTML = '<p class="text-danger">Test failed: ' + err + '</p>';
+                box.innerHTML = '<p class="text-danger">Test failed: ' + escapeText(err) + '</p>';
             });
     }
 

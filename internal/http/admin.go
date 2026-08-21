@@ -15,8 +15,18 @@ import (
 // adminCookieName holds the proof that the settings password was entered.
 const adminCookieName = "navidrums_admin"
 
-// adminSessionTTL is how long an unlocked settings session lasts.
-const adminSessionTTL = 12 * time.Hour
+// defaultAdminSessionTTL is how long an unlocked settings session lasts when
+// NAVIDRUMS_ADMIN_SESSION_TTL is not set. Short by design: Settings is the one
+// place that can change credentials and providers.
+const defaultAdminSessionTTL = 30 * time.Minute
+
+// adminSessionTTL returns the configured session lifetime.
+func (h *Handler) adminSessionTTL() time.Duration {
+	if h.Config != nil && h.Config.AdminSessionTTL > 0 {
+		return h.Config.AdminSessionTTL
+	}
+	return defaultAdminSessionTTL
+}
 
 // AdminLocked reports whether settings are password protected. With no admin
 // password configured the gate is disabled entirely, which keeps existing
@@ -87,14 +97,16 @@ func (h *Handler) AdminUnlockHTMX(w http.ResponseWriter, r *http.Request) {
 
 	password := r.FormValue("password")
 	if subtleEqual(password, h.Config.AdminPassword) {
-		expiry := time.Now().Add(adminSessionTTL).Unix()
+		expiry := time.Now().Add(h.adminSessionTTL()).Unix()
+		// No Expires or MaxAge: a session cookie is discarded when the browser
+		// closes, so Settings re-locks then as well as at the expiry the HMAC
+		// carries, which is enforced server side regardless.
 		http.SetCookie(w, &http.Cookie{
 			Name:     adminCookieName,
 			Value:    h.adminToken(expiry),
 			Path:     "/",
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
-			Expires:  time.Unix(expiry, 0),
 		})
 		w.Header().Set("HX-Redirect", "/settings")
 		w.WriteHeader(http.StatusNoContent)

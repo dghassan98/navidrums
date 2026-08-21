@@ -46,6 +46,7 @@ type Config struct {
 	QobuzAuthToken        string
 	AdminPassword         string
 	NotifyURL             string
+	AdminSessionTTL       time.Duration
 }
 
 // Load loads configuration from environment variables with defaults
@@ -84,6 +85,7 @@ func Load() *Config {
 		QobuzAuthToken:        getEnv("QOBUZ_AUTH_TOKEN", ""),
 		AdminPassword:         getEnv("NAVIDRUMS_ADMIN_PASSWORD", ""),
 		NotifyURL:             getEnv("NOTIFY_URL", ""),
+		AdminSessionTTL:       getEnvDuration("NAVIDRUMS_ADMIN_SESSION_TTL", 30*time.Minute),
 	}
 }
 

@@ -129,6 +129,7 @@ Environment variables:
 | `NAVIDRUMS_PASSWORD` | (empty) | Password for HTTP basic authentication (empty disables auth) |
 | `SKIP_AUTH` | `false` | Set to `true` to disable authentication entirely |
 | `NAVIDRUMS_ADMIN_PASSWORD` | (empty) | Password gating the Settings page; empty leaves Settings open |
+| `NAVIDRUMS_ADMIN_SESSION_TTL` | `30m` | How long Settings stays unlocked before re-locking |
 | `NOTIFY_URL` | (empty) | Discord webhook or Apprise API endpoint for download notifications |
 | `CACHE_TTL` | `12h` | Provider response cache TTL (e.g., `1h`, `24h`, `7d`) |
 | `MUSICBRAINZ_CACHE_TTL` | `7d` | MusicBrainz API response cache TTL (e.g., `1d`, `168h`) |
