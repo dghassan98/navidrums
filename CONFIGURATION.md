@@ -70,6 +70,18 @@ Basic HTTP authentication is optional:
 - Leave `NAVIDRUMS_PASSWORD` empty to disable authentication
 - When password is set, `NAVIDRUMS_USERNAME` must also be set
 
+## Rate Limiting
+
+Static assets (`/static/*`) and proxied artwork (`/img`) are exempt: one page of results asks for dozens of
+covers at once, and counting them starves the requests that matter. Everything else is limited per client IP.
+
+Defaults are 600 requests/minute with a burst of 60. The burst matters more than the rate here, because the
+Settings page fires around twenty requests as it loads; a burst below that makes it fail to load with 429s
+rather than appear slow.
+
+Behind a reverse proxy the client IP comes from `X-Forwarded-For` or `X-Real-IP`. Make sure the proxy sets
+one, or every request is attributed to the proxy and all users share a single limit.
+
 ## Notifications
 
 Set `NOTIFY_URL`, or fill it in under **Settings → Notifications**, to be told when downloads finish. A

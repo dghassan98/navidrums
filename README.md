@@ -133,9 +133,9 @@ Environment variables:
 | `CACHE_TTL` | `12h` | Provider response cache TTL (e.g., `1h`, `24h`, `7d`) |
 | `MUSICBRAINZ_CACHE_TTL` | `7d` | MusicBrainz API response cache TTL (e.g., `1d`, `168h`) |
 | `MUSICBRAINZ_URL` | `https://musicbrainz.org/ws/2` | MusicBrainz API endpoint for metadata enrichment |
-| `RATE_LIMIT_REQUESTS` | `200` | Maximum requests per rate limit window |
+| `RATE_LIMIT_REQUESTS` | `600` | Maximum requests per rate limit window |
 | `RATE_LIMIT_WINDOW` | `1m` | Rate limit time window (e.g., `30s`, `1m`) |
-| `RATE_LIMIT_BURST` | `10` | Burst requests allowed beyond rate limit |
+| `RATE_LIMIT_BURST` | `60` | Burst requests allowed beyond rate limit (a page load fires ~20) |
 | `DISABLE_RATE_LIMIT` | `false` | Disable rate limiting (use when behind Cloudflare) |
 | `THEME` | `golden` | Default application theme (can be overridden in Settings) |
 | `QOBUZ_AUTH_TOKEN` | (empty) | Qobuz auth token from a logged-in web player; replaces email/password |

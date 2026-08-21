@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/subtle"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -202,6 +203,14 @@ func rateLimitMiddleware(requestsPerWindow int, window time.Duration, burst int)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Static assets and artwork are cheap, cacheable and inherently
+			// bursty: one page of results asks for dozens of covers at once.
+			// Counting them starves the requests that actually matter.
+			if isRateLimitExempt(r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			ip := getIP(r)
 			l, exists := limiters.Load(ip)
 			if !exists {
@@ -223,6 +232,11 @@ func rateLimitMiddleware(requestsPerWindow int, window time.Duration, burst int)
 	}
 }
 
+// isRateLimitExempt reports paths that should never be throttled.
+func isRateLimitExempt(path string) bool {
+	return strings.HasPrefix(path, "/static/") || path == "/img"
+}
+
 func getIP(r *http.Request) string {
 	xff := r.Header.Get("X-Forwarded-For")
 	if xff != "" {
@@ -232,6 +246,13 @@ func getIP(r *http.Request) string {
 	xri := r.Header.Get("X-Real-IP")
 	if xri != "" {
 		return xri
+	}
+
+	// RemoteAddr carries host:port, and the port differs on every connection.
+	// Returning it whole gave each request its own limiter, so a client that
+	// was not behind a proxy was never rate limited at all.
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
 	}
 	return r.RemoteAddr
 }
