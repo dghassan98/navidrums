@@ -77,6 +77,20 @@ Label/value pairs.
 </div>
 ```
 
+### Callout (`.callout`)
+
+Collapsible inline help, e.g. where to find a credential. Native `<details>`, no JS.
+
+```html
+<details class="callout">
+  <summary>Where do I get these?</summary>
+  <div class="callout-body">
+    <h4>Heading</h4>
+    <ol><li>Step</li></ol>
+  </div>
+</details>
+```
+
 ### Section Header (`.section-header`)
 
 Title + action button.

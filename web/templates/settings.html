@@ -41,7 +41,51 @@
             <input type="password" id="qobuz-auth-token" class="form-input" placeholder="unchanged">
         </div>
         <p class="hint">Leave a field blank to keep the current value. Type <code>-</code> to clear it and fall
-            back to the environment. See <code>QOBUZ_API.md</code> for where to read these from the web player.</p>
+            back to the environment.</p>
+
+        <details class="callout mt-2">
+            <summary>Where do I get these? (and what to do when one stops working)</summary>
+            <div class="callout-body">
+                <p class="text-dim">Qobuz does not issue these. They are read out of the Qobuz web player, and Qobuz
+                    rotates them, so expect to redo this occasionally. Take all three from the
+                    <strong>same browser session</strong> so they match.</p>
+
+                <h4>App ID and App secret</h4>
+                <ol>
+                    <li>Open <code>https://play.qobuz.com/login</code></li>
+                    <li>Press <code>F12</code> &rarr; <strong>Sources</strong> tab</li>
+                    <li>Open <code>play.qobuz.com/resources/&lt;version&gt;/bundle.js</code></li>
+                    <li>Click <code>{ }</code> (bottom-left) to pretty-print it, then <code>Ctrl+F</code> for
+                        <code>appSecret</code></li>
+                    <li>Use the pair inside <code>production:{api:{appId:"...",appSecret:"..."}}</code></li>
+                </ol>
+                <p class="text-dim">Ignore <code>appSecret:"XXXXX"</code> just above it &mdash; that is the beta
+                    placeholder, and it is a handy confirmation you are reading the right block. Other
+                    <code>appId</code> values elsewhere in the bundle belong to different Qobuz services.</p>
+
+                <h4>Auth token</h4>
+                <ol>
+                    <li>Log in at <code>play.qobuz.com</code></li>
+                    <li><code>F12</code> &rarr; <strong>Network</strong> tab, then click any track</li>
+                    <li>Pick a request to <code>www.qobuz.com/api.json/0.2/...</code></li>
+                    <li>Under <strong>Request Headers</strong>, copy <code>X-User-Auth-Token</code></li>
+                </ol>
+                <p class="text-dim">Alternative: <strong>Application</strong> &rarr; <strong>Local Storage</strong>
+                    &rarr; <code>https://play.qobuz.com</code>, then find the entry containing
+                    <code>user_auth_token</code> and copy just that value.</p>
+
+                <h4>Which one do I replace?</h4>
+                <p class="text-dim">Hit <strong>Test connection</strong> &mdash; it checks each separately:</p>
+                <ul>
+                    <li><strong>App secret: rejected</strong> &mdash; Qobuz rotated it. Re-read the bundle. Browsing
+                        keeps working; only downloads break.</li>
+                    <li><strong>Account: rejected</strong> &mdash; the token expired. Grab a fresh one.</li>
+                    <li><strong>App ID: rejected</strong> &mdash; re-read the bundle and take the id and secret
+                        together.</li>
+                </ul>
+                <p class="text-dim">A paid subscription is required: file URLs are refused on free accounts.</p>
+            </div>
+        </details>
         <div class="toolbar-row">
             <button class="btn btn-primary" onclick="saveQobuzCredentials()">Save credentials</button>
             <button class="btn btn-outline" onclick="checkQobuzStatus()">Test connection</button>

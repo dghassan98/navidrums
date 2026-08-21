@@ -1918,3 +1918,62 @@ textarea {
     }
 }
 
+
+/* Callout — collapsible inline help, e.g. where to find a credential */
+.callout {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px;
+}
+
+.callout > summary {
+    cursor: pointer;
+    font-weight: 500;
+    list-style: none;
+}
+
+.callout > summary::-webkit-details-marker {
+    display: none;
+}
+
+.callout > summary::before {
+    content: "▸ ";
+    color: var(--text-dim);
+}
+
+.callout[open] > summary::before {
+    content: "▾ ";
+}
+
+.callout-body {
+    margin-top: 12px;
+    font-size: 0.875rem;
+}
+
+.callout-body h4 {
+    margin: 16px 0 6px;
+    font-size: 0.875rem;
+}
+
+.callout-body h4:first-child {
+    margin-top: 0;
+}
+
+.callout-body ol,
+.callout-body ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.callout-body li {
+    margin-bottom: 4px;
+}
+
+code {
+    background: var(--input);
+    border-radius: var(--radius-sm);
+    padding: 1px 5px;
+    font-size: 0.875em;
+    word-break: break-word;
+}
