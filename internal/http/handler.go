@@ -139,13 +139,15 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/htmx/quality/reset", h.ResetQualityHTMX)
 	})
 
+	r.Get("/img", h.ImageProxy)
+
 	r.Get("/htmx/moods", h.GetMoodsHTMX)
 	r.Get("/htmx/languages", h.GetLanguagesHTMX)
 }
 
 func (h *Handler) RenderPage(w http.ResponseWriter, pageTmpl string, data interface{}) {
 	// Register template functions before parsing
-	tmpl := template.New("base").Funcs(template.FuncMap{"join": strings.Join})
+	tmpl := template.New("base").Funcs(template.FuncMap{"join": strings.Join, "img": ProxiedImageURL})
 	tmpl, err := tmpl.ParseFS(web.Files,
 		"templates/base.html",
 		"templates/"+pageTmpl,
@@ -177,7 +179,7 @@ func (h *Handler) RenderFragment(w http.ResponseWriter, fragTmpl string, data in
 	patterns := []string{"templates/components/*.html", "templates/" + fragTmpl}
 
 	// Register functions before parsing
-	tmpl := template.New("frag").Funcs(template.FuncMap{"join": strings.Join})
+	tmpl := template.New("frag").Funcs(template.FuncMap{"join": strings.Join, "img": ProxiedImageURL})
 	tmpl, err := tmpl.ParseFS(web.Files, patterns...)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

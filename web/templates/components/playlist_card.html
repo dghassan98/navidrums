@@ -1,6 +1,6 @@
 <div class="card">
     <a href="/playlist/{{.ProviderID}}">
-        <img src="{{if .ImageURL}}{{.ImageURL}}{{else}}/static/img/placeholder.svg{{end}}"
+        <img src="{{img .ImageURL}}"
             alt="{{.Title}}" loading="lazy">
     </a>
     <div class="card-title" title="{{.Title}}"><a href="/playlist/{{.ProviderID}}">{{.Title}}</a></div>
