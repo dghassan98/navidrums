@@ -144,7 +144,7 @@ func (p *QobuzProvider) GetStream(ctx context.Context, trackID string, isrc stri
 		return nil, "", fmt.Errorf("failed to create stream request: %w", err)
 	}
 
-	resp, err := p.client.GetUnderlyingClient().Do(req)
+	resp, err := streamHTTPClient.Do(req)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch stream: %w", err)
 	}
@@ -159,7 +159,7 @@ func (p *QobuzProvider) GetStream(ctx context.Context, trackID string, isrc stri
 		mime = "audio/flac"
 	}
 
-	return resp.Body, mime, nil
+	return withSize(resp.Body, resp.ContentLength), mime, nil
 }
 
 func (p *QobuzProvider) resolveTrackID(ctx context.Context, trackID string, isrc string) (int, error) {

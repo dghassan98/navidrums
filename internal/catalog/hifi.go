@@ -182,7 +182,7 @@ func (p *HifiProvider) streamFromManifest(ctx context.Context, manifestMimeType 
 		if manifest.MimeType != "" {
 			mimeType = manifest.MimeType
 		}
-		return sResp.Body, mimeType, nil
+		return withSize(sResp.Body, sResp.ContentLength), mimeType, nil
 	}
 
 	if manifestMimeType == constants.MimeTypeDashXML {
@@ -213,7 +213,7 @@ func (p *HifiProvider) streamFromManifest(ctx context.Context, manifestMimeType 
 		if strings.Contains(contentType, "mp4") {
 			mimeType = constants.MimeTypeMP4
 		}
-		return sResp.Body, mimeType, nil
+		return withSize(sResp.Body, sResp.ContentLength), mimeType, nil
 	}
 
 	return nil, "", fmt.Errorf("unsupported manifest type: %s", manifestMimeType)
@@ -228,7 +228,7 @@ func (p *HifiProvider) openStreamURL(ctx context.Context, streamURL string) (*ht
 	}
 	p.setRequestHeaders(req)
 
-	resp, err := p.client.Do(ctx, req)
+	resp, err := streamHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func (p *HifiProvider) handleSegmentedDash(ctx context.Context, manifest string)
 
 	return &multiSegmentReader{
 		urls:   urls,
-		client: p.client.GetUnderlyingClient(),
+		client: streamHTTPClient,
 		ctx:    ctx,
 	}, "audio/mp4", nil
 }

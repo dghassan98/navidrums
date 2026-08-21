@@ -127,11 +127,13 @@ type JobStats struct {
 }
 
 func (db *DB) GetJobStats() (*JobStats, error) {
+	// COALESCE because SUM over zero rows is NULL, which fails to scan into an
+	// int and left the history tab without its stats whenever it was empty.
 	query := `SELECT 
 		COUNT(*) as total,
-		SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed,
-		SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as failed,
-		SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled
+		COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as completed,
+		COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as failed,
+		COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as cancelled
 	FROM jobs 
 	WHERE status IN (?, ?, ?)`
 

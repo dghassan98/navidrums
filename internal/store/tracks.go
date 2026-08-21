@@ -445,3 +445,38 @@ func (db *DB) CreateTrackBatch(tracks []*domain.Track) (int, error) {
 
 	return createdCount, nil
 }
+
+// GetTracksByProviderIDs looks up several tracks at once, keyed by provider ID.
+// The queue lists many jobs at a time, so this avoids a query per row.
+func (db *DB) GetTracksByProviderIDs(providerIDs []string) (map[string]*domain.Track, error) {
+	result := make(map[string]*domain.Track, len(providerIDs))
+	if len(providerIDs) == 0 {
+		return result, nil
+	}
+
+	query, args, err := sqlx.In(`SELECT * FROM tracks WHERE provider_id IN (?)`, providerIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	var tracks []*domain.Track
+	if err := db.Select(&tracks, db.Rebind(query), args...); err != nil {
+		return nil, err
+	}
+
+	for _, track := range tracks {
+		result[track.ProviderID] = track
+	}
+	return result, nil
+}
+
+// GetAlbumSampleTrack returns any downloaded track from an album, used to put a
+// name on a container job whose source ID is an album rather than a track.
+func (db *DB) GetAlbumSampleTrack(albumID string) (*domain.Track, error) {
+	var track domain.Track
+	err := db.Get(&track, `SELECT * FROM tracks WHERE album_id = ? LIMIT 1`, albumID)
+	if err != nil {
+		return nil, err
+	}
+	return &track, nil
+}

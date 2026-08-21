@@ -29,11 +29,9 @@
         <div class="item-body">
             <div class="item-title flex items-center" title="{{.SourceID}}">
                 <span class="text-xs font-bold text-dim uppercase tracking-wider mr-2">{{.Type}}</span>
-                <span class="text-base">{{.SourceID}}</span>
+                <span class="text-base">{{.PrimaryLabel}}</span>
             </div>
-            <div class="item-subtitle mt-1">
-                {{if .Progress}}Progress: {{printf "%.0f" .Progress}}%{{end}}
-            </div>
+            {{with .SecondaryLabel}}<div class="item-subtitle mt-1">{{.}}</div>{{end}}
             {{if .Error}}
             <div class="text-danger text-xs mt-2"
                 style="white-space: normal; overflow-wrap: anywhere; line-height: 1.4;">

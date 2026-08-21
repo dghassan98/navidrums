@@ -238,7 +238,7 @@ func (h *Handler) QueueActiveHTMX(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Sscanf(p, "%d", &page)
 	}
 
-	jobs, total, err := h.JobService.ListActiveJobs(page, constants.MaxSearchResults)
+	jobs, total, err := h.JobService.ListActiveJobViews(page, constants.MaxSearchResults)
 	if err != nil {
 		h.Logger.Error("Failed to list active jobs", "error", err)
 	}
@@ -257,7 +257,7 @@ func (h *Handler) QueueHistoryHTMX(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Sscanf(p, "%d", &page)
 	}
 
-	jobs, total, err := h.JobService.ListFinishedJobs(page, constants.MaxHistoryItems)
+	jobs, total, err := h.JobService.ListFinishedJobViews(page, constants.MaxHistoryItems)
 	if err != nil {
 		h.Logger.Error("Failed to list finished jobs", "error", err)
 		return
@@ -284,7 +284,7 @@ func (h *Handler) CancelJobHTMX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobs, _, err := h.JobService.ListActiveJobs(1, constants.MaxSearchResults)
+	jobs, _, err := h.JobService.ListActiveJobViews(1, constants.MaxSearchResults)
 	if err != nil {
 		h.Logger.Error("Failed to list active jobs", "error", err)
 	}
@@ -300,7 +300,7 @@ func (h *Handler) RetryJobHTMX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobs, _, err := h.JobService.ListActiveJobs(1, constants.MaxSearchResults)
+	jobs, _, err := h.JobService.ListActiveJobViews(1, constants.MaxSearchResults)
 	if err != nil {
 		h.Logger.Error("Failed to list active jobs", "error", err)
 	}

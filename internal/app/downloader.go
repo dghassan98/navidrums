@@ -15,8 +15,12 @@ import (
 	"github.com/cesargomez89/navidrums/internal/storage"
 )
 
+// ProgressFunc reports transfer progress. total is 0 when the server did not
+// declare a size, in which case only downloaded is meaningful.
+type ProgressFunc func(downloaded, total int64)
+
 type Downloader interface {
-	Download(ctx context.Context, track *domain.Track, destPathNoExt string, quality string, logger *slog.Logger) (string, error)
+	Download(ctx context.Context, track *domain.Track, destPathNoExt string, quality string, logger *slog.Logger, onProgress ProgressFunc) (string, error)
 }
 
 type downloader struct {
@@ -31,7 +35,7 @@ func NewDownloader(pm *catalog.ProviderManager, cfg *config.Config) Downloader {
 	}
 }
 
-func (d *downloader) Download(ctx context.Context, track *domain.Track, destPathNoExt string, quality string, logger *slog.Logger) (string, error) {
+func (d *downloader) Download(ctx context.Context, track *domain.Track, destPathNoExt string, quality string, logger *slog.Logger, onProgress ProgressFunc) (string, error) {
 	provider := d.providerManager.GetDownloadProvider()
 
 	// Lossless payloads can arrive as FLAC inside an MP4 container: that is the
@@ -79,7 +83,12 @@ func (d *downloader) Download(ctx context.Context, track *domain.Track, destPath
 			continue
 		}
 
-		_, err = io.Copy(f, stream)
+		var total int64
+		if sizer, ok := stream.(catalog.StreamSizer); ok {
+			total = sizer.Size()
+		}
+
+		_, err = io.Copy(f, newProgressReader(stream, total, onProgress))
 		_ = stream.Close()
 		_ = f.Close()
 
@@ -111,4 +120,37 @@ func (d *downloader) Download(ctx context.Context, track *domain.Track, destPath
 	}
 
 	return "", fmt.Errorf("download failed after %d attempts: %w", constants.DefaultRetryCount, lastErr)
+}
+
+// progressReadInterval throttles progress reporting: a lossless track is a few
+// thousand reads and each report writes to SQLite.
+const progressReadInterval = 750 * time.Millisecond
+
+// progressReader reports how much of a stream has been read.
+type progressReader struct {
+	reader     io.Reader
+	onProgress ProgressFunc
+	total      int64
+	downloaded int64
+	lastReport time.Time
+}
+
+func newProgressReader(reader io.Reader, total int64, onProgress ProgressFunc) io.Reader {
+	if onProgress == nil {
+		return reader
+	}
+	return &progressReader{reader: reader, total: total, onProgress: onProgress}
+}
+
+func (r *progressReader) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	r.downloaded += int64(n)
+
+	// Report on a timer, and always on the final read so the bar completes.
+	if time.Since(r.lastReport) >= progressReadInterval || err == io.EOF {
+		r.lastReport = time.Now()
+		r.onProgress(r.downloaded, r.total)
+	}
+
+	return n, err
 }

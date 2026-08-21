@@ -59,3 +59,33 @@ func TestSeedDefaultProviders(t *testing.T) {
 		}
 	})
 }
+
+// TestGetJobStatsOnEmptyHistory covers the NULL that SUM returns over zero
+// rows, which previously failed to scan and left the history tab statless.
+func TestGetJobStatsOnEmptyHistory(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	stats, err := db.GetJobStats()
+	if err != nil {
+		t.Fatalf("GetJobStats on an empty history failed: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		got  int
+	}{
+		{"total", stats.Total},
+		{"completed", stats.Completed},
+		{"failed", stats.Failed},
+		{"cancelled", stats.Cancelled},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != 0 {
+				t.Errorf("%s = %d, want 0", tt.name, tt.got)
+			}
+		})
+	}
+}

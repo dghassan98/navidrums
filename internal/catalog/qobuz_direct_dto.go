@@ -110,3 +110,13 @@ func (r *QobuzDirectPlaylistResponse) ToDomain() *domain.Playlist {
 		Tracks:      tracks,
 	}
 }
+
+// QobuzSuggestedAlbumsResponse is the album/suggest envelope.
+type QobuzSuggestedAlbumsResponse struct {
+	Albums QobuzSearchAlbums `json:"albums"`
+}
+
+// QobuzSimilarArtistsResponse is the artist/getSimilarArtists envelope.
+type QobuzSimilarArtistsResponse struct {
+	Artists QobuzSearchArtists `json:"artists"`
+}

@@ -44,6 +44,9 @@ var (
 // qobuzPlaylistTrackLimit caps how many playlist tracks are fetched in one call.
 const qobuzPlaylistTrackLimit = 500
 
+// similarArtistsLimit matches what the other providers request.
+const similarArtistsLimit = 8
+
 // QobuzCredentials holds everything the Qobuz API needs to identify the client
 // and the account. AppID and AppSecret identify the *application*; Qobuz does
 // not issue them per user, so they are supplied through configuration.
@@ -232,7 +235,7 @@ func (p *QobuzDirectProvider) GetStream(ctx context.Context, trackID string, isr
 		mimeType = constants.MimeTypeFLAC
 	}
 
-	return resp.Body, mimeType, nil
+	return withSize(resp.Body, resp.ContentLength), mimeType, nil
 }
 
 // trackFileURL asks Qobuz for a time-limited CDN URL. The request must carry a
@@ -320,19 +323,49 @@ func (p *QobuzDirectProvider) resolveTrackID(ctx context.Context, trackID string
 }
 
 func (p *QobuzDirectProvider) GetSimilarAlbums(ctx context.Context, id string) ([]domain.Album, error) {
-	return nil, ErrQobuzNotSupported
+	params := url.Values{}
+	params.Set("album_id", id)
+
+	var resp QobuzSuggestedAlbumsResponse
+	if err := p.authedGet(ctx, "album/suggest", params, &resp); err != nil {
+		return nil, fmt.Errorf("qobuz get similar albums failed: %w", err)
+	}
+
+	albums := make([]domain.Album, 0, len(resp.Albums.Items))
+	for i := range resp.Albums.Items {
+		albums = append(albums, resp.Albums.Items[i].ToDomain())
+	}
+	return albums, nil
 }
 
 func (p *QobuzDirectProvider) GetSimilarArtists(ctx context.Context, id string) ([]domain.Artist, error) {
-	return nil, ErrQobuzNotSupported
+	params := url.Values{}
+	params.Set("artist_id", id)
+	params.Set("limit", strconv.Itoa(similarArtistsLimit))
+	params.Set("offset", "0")
+
+	var resp QobuzSimilarArtistsResponse
+	if err := p.authedGet(ctx, "artist/getSimilarArtists", params, &resp); err != nil {
+		return nil, fmt.Errorf("qobuz get similar artists failed: %w", err)
+	}
+
+	artists := make([]domain.Artist, 0, len(resp.Artists.Items))
+	for i := range resp.Artists.Items {
+		artists = append(artists, resp.Artists.Items[i].ToDomain())
+	}
+	return artists, nil
 }
 
 func (p *QobuzDirectProvider) GetLyrics(ctx context.Context, trackID string) (string, string, error) {
 	return "", "", ErrQobuzNotSupported
 }
 
+// GetRecommendations has no equivalent on the Qobuz API that takes a track ID:
+// the web player uses a POST to dynamic/suggest built from listening history.
+// Returning an empty list rather than an error keeps this optional panel quiet
+// instead of surfacing a failure for something Qobuz simply does not offer.
 func (p *QobuzDirectProvider) GetRecommendations(ctx context.Context, id string) ([]domain.CatalogTrack, error) {
-	return nil, ErrQobuzNotSupported
+	return nil, nil
 }
 
 // authToken returns a cached auth token, logging in when there is none or when
@@ -442,7 +475,7 @@ func (p *QobuzDirectProvider) openStreamURL(ctx context.Context, streamURL strin
 	}
 	req.Header.Set("User-Agent", defaultProviderUserAgent)
 
-	resp, err := p.client.GetUnderlyingClient().Do(req)
+	resp, err := streamHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch stream: %w", err)
 	}

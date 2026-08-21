@@ -203,7 +203,7 @@ func (h *TrackJobHandler) executeDownload(ctx context.Context, job *domain.Job, 
 	}
 
 	quality := h.getQuality()
-	finalPath, err := h.Downloader.Download(ctx, track, destPath, quality, logger)
+	finalPath, err := h.Downloader.Download(ctx, track, destPath, quality, logger, h.trackProgressReporter(job.ID))
 	if err != nil {
 		logger.Error("Download failed", "error", err)
 		_ = h.Repo.MarkTrackFailed(track.ID, err.Error())
@@ -908,4 +908,22 @@ func (h *ContainerJobHandler) isForceDownload() bool {
 	}
 	val, err := h.SettingsRepo.Get(store.SettingForceDownload)
 	return err == nil && val == "true"
+}
+
+// trackProgressReporter turns byte counts into job progress. Without it a track
+// job sits at 0% for the whole download and only the parent job ever moved,
+// so the queue showed nothing between "running" and "finished".
+func (h *TrackJobHandler) trackProgressReporter(jobID string) app.ProgressFunc {
+	return func(downloaded, total int64) {
+		if total <= 0 {
+			return // no Content-Length: nothing meaningful to show as a percentage
+		}
+
+		progress := float64(downloaded) / float64(total) * 100
+		if progress > 100 {
+			progress = 100
+		}
+
+		_ = h.Repo.UpdateJobProgress(jobID, progress)
+	}
 }

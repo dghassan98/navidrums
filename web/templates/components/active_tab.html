@@ -5,10 +5,16 @@
     <div class="item border border-[var(--border)]">
         <div class="item-body">
             <div class="item-title" title="{{.SourceID}}"><span
-                    class="text-xs font-bold text-dim uppercase tracking-wider mr-2">{{.Type}}</span> {{.SourceID}}
+                    class="text-xs font-bold text-dim uppercase tracking-wider mr-2">{{.Type}}</span>
+                {{.PrimaryLabel}}
             </div>
-            <div class="item-subtitle mt-1">
-                Progress: {{printf "%.0f" .Progress}}%
+            {{with .SecondaryLabel}}<div class="item-subtitle mt-1">{{.}}</div>{{end}}
+            <div class="progress-row mt-1">
+                <div class="progress-track">
+                    <div class="progress-fill{{if eq .Status "running"}} progress-fill--active{{end}}"
+                        style="width: {{printf "%.0f" .Progress}}%"></div>
+                </div>
+                <span class="progress-value">{{printf "%.0f" .Progress}}%</span>
             </div>
             {{if .Error}}<div class="text-danger text-xs mt-1"
                 style="white-space: normal; overflow-wrap: anywhere; line-height: 1.3;">{{.Error}}</div>{{end}}

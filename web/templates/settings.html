@@ -51,17 +51,21 @@
                     <strong>same browser session</strong> so they match.</p>
 
                 <h4>App ID and App secret</h4>
+                <p class="text-dim">Easiest way &mdash; the community tool derives both automatically:
+                    <a href="https://github.com/QobuzDL/Qobuz-AppID-Secret-Tool" target="_blank"
+                        rel="noopener noreferrer">QobuzDL/Qobuz-AppID-Secret-Tool</a></p>
                 <ol>
-                    <li>Open <code>https://play.qobuz.com/login</code></li>
-                    <li>Press <code>F12</code> &rarr; <strong>Sources</strong> tab</li>
-                    <li>Open <code>play.qobuz.com/resources/&lt;version&gt;/bundle.js</code></li>
-                    <li>Click <code>{ }</code> (bottom-left) to pretty-print it, then <code>Ctrl+F</code> for
-                        <code>appSecret</code></li>
-                    <li>Use the pair inside <code>production:{api:{appId:"...",appSecret:"..."}}</code></li>
+                    <li>Install the one dependency: <code>pip install aiohttp</code></li>
+                    <li>Run <code>python main.py</code></li>
+                    <li>It prints an <code>app_id</code> and a <code>secret</code> &mdash; paste them above</li>
                 </ol>
-                <p class="text-dim">Ignore <code>appSecret:"XXXXX"</code> just above it &mdash; that is the beta
-                    placeholder, and it is a handy confirmation you are reading the right block. Other
-                    <code>appId</code> values elsewhere in the bundle belong to different Qobuz services.</p>
+                <p class="text-dim">It reads the current bundle from <code>play.qobuz.com</code>, derives the
+                    candidate secrets, and verifies each against <code>track/getFileUrl</code>, so the pair it prints
+                    is already known-good. No Qobuz account is needed to run it.</p>
+                <p class="text-dim">Manual alternative: <code>F12</code> &rarr; <strong>Sources</strong> &rarr;
+                    <code>play.qobuz.com/resources/&lt;version&gt;/bundle.js</code>, pretty-print with <code>{ }</code>,
+                    then <code>Ctrl+F</code> for <code>appSecret</code> and take the pair inside
+                    <code>production:{api:{...}}</code>. Ignore the <code>"XXXXX"</code> placeholder just above it.</p>
 
                 <h4>Auth token</h4>
                 <ol>
@@ -72,7 +76,7 @@
                 </ol>
                 <p class="text-dim">Alternative: <strong>Application</strong> &rarr; <strong>Local Storage</strong>
                     &rarr; <code>https://play.qobuz.com</code>, then find the entry containing
-                    <code>user_auth_token</code> and copy just that value.</p>
+                    <code>localuser (and the corresponding auth value) </code> and copy just that value.</p>
 
                 <h4>Which one do I replace?</h4>
                 <p class="text-dim">Hit <strong>Test connection</strong> &mdash; it checks each separately:</p>
