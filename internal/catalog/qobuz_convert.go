@@ -62,7 +62,7 @@ func (item *QobuzSearchAlbumItem) ToDomain() domain.Album {
 func (item *QobuzSearchArtistItem) ToDomain() domain.Artist {
 	picURL := ""
 	if item.Image != nil {
-		picURL = "https://static.qobuz.com/images/artists/" + item.Image.Hash + "." + item.Image.Format
+		picURL = qobuzArtistImageBase + item.Image.Hash + "." + item.Image.Format
 	}
 	return domain.Artist{
 		ID:         strconv.Itoa(item.ID),
@@ -213,7 +213,7 @@ func (item *QobuzTrackResponse) ToDomain() domain.CatalogTrack {
 func (data *QobuzArtistData) ToDomain() *domain.Artist {
 	picURL := ""
 	if data.Artist.Images.Portrait != nil {
-		picURL = "https://static.qobuz.com/images/artists/" + data.Artist.Images.Portrait.Hash + "." + data.Artist.Images.Portrait.Format
+		picURL = qobuzArtistImageBase + data.Artist.Images.Portrait.Hash + "." + data.Artist.Images.Portrait.Format
 	}
 
 	albums := make([]domain.Album, 0)
@@ -278,7 +278,7 @@ func (item *QobuzTopTrackItem) ToDomain() domain.CatalogTrack {
 func (item *QobuzSimilarArtistItem) ToDomain() domain.Artist {
 	picURL := ""
 	if item.Images.Portrait != nil {
-		picURL = "https://static.qobuz.com/images/artists/" + item.Images.Portrait.Hash + "." + item.Images.Portrait.Format
+		picURL = qobuzArtistImageBase + item.Images.Portrait.Hash + "." + item.Images.Portrait.Format
 	}
 	return domain.Artist{
 		ID:         strconv.Itoa(item.ID),

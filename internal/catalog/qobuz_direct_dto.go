@@ -113,10 +113,118 @@ func (r *QobuzDirectPlaylistResponse) ToDomain() *domain.Playlist {
 
 // QobuzSuggestedAlbumsResponse is the album/suggest envelope.
 type QobuzSuggestedAlbumsResponse struct {
-	Albums QobuzSearchAlbums `json:"albums"`
+	Albums struct {
+		Items []QobuzSuggestedAlbum `json:"items"`
+		Total int                   `json:"total"`
+	} `json:"albums"`
 }
 
 // QobuzSimilarArtistsResponse is the artist/getSimilarArtists envelope.
 type QobuzSimilarArtistsResponse struct {
-	Artists QobuzSearchArtists `json:"artists"`
+	Artists struct {
+		Items []QobuzSuggestedArtist `json:"items"`
+		Total int                    `json:"total"`
+	} `json:"artists"`
 }
+
+// QobuzSuggestedArtist is an artist/getSimilarArtists item. `picture` already
+// holds a full URL, with `image` as the fallback.
+type QobuzSuggestedArtist struct {
+	ID      int               `json:"id"`
+	Name    string            `json:"name"`
+	Picture string            `json:"picture"`
+	Image   *QobuzArtistImage `json:"image"`
+}
+
+func (a *QobuzSuggestedArtist) ToDomain() domain.Artist {
+	pictureURL := a.Picture
+	if pictureURL == "" {
+		pictureURL = a.Image.URL()
+	}
+
+	return domain.Artist{
+		ID:         strconv.Itoa(a.ID),
+		Name:       a.Name,
+		PictureURL: pictureURL,
+	}
+}
+
+// QobuzArtistImage covers both artist image shapes Qobuz returns. The official
+// API sends ready-made URLs (small/medium/large); the proxy's artist pages send
+// a hash and format that have to be assembled into a URL.
+type QobuzArtistImage struct {
+	Small  string `json:"small"`
+	Medium string `json:"medium"`
+	Large  string `json:"large"`
+	Hash   string `json:"hash"`
+	Format string `json:"format"`
+}
+
+// URL returns the largest usable image URL, or "" when the payload carried none.
+func (i *QobuzArtistImage) URL() string {
+	if i == nil {
+		return ""
+	}
+	for _, candidate := range []string{i.Large, i.Medium, i.Small} {
+		if candidate != "" {
+			return candidate
+		}
+	}
+	if i.Hash != "" && i.Format != "" {
+		return qobuzArtistImageBase + i.Hash + "." + i.Format
+	}
+	return ""
+}
+
+// QobuzSuggestedAlbum is an album/suggest item. It is not shaped like a search
+// result: the track count and release date are named differently and there is
+// no single `artist`, only an `artists` list.
+type QobuzSuggestedAlbum struct {
+	ID         string             `json:"id"`
+	Title      string             `json:"title"`
+	TrackCount int                `json:"track_count"`
+	Duration   int                `json:"duration"`
+	Image      QobuzImage         `json:"image"`
+	Artists    []QobuzAlbumArtist `json:"artists"`
+	Label      QobuzLabel         `json:"label"`
+	Genre      QobuzGenre         `json:"genre"`
+	Dates      struct {
+		Original string `json:"original"`
+		Stream   string `json:"stream"`
+	} `json:"dates"`
+}
+
+func (a *QobuzSuggestedAlbum) ToDomain() domain.Album {
+	album := domain.Album{
+		ID:          a.ID,
+		Title:       a.Title,
+		AlbumArtURL: a.Image.Large,
+		Genre:       a.Genre.Name,
+		Label:       a.Label.Name,
+		Year:        parseYear(firstNonBlank(a.Dates.Original, a.Dates.Stream)),
+		TotalTracks: a.TrackCount,
+	}
+
+	for _, artist := range a.Artists {
+		album.ArtistIDs = append(album.ArtistIDs, strconv.Itoa(artist.ID))
+		album.Artists = append(album.Artists, artist.Name)
+	}
+	if len(a.Artists) > 0 {
+		album.ArtistID = strconv.Itoa(a.Artists[0].ID)
+		album.Artist = a.Artists[0].Name
+	}
+
+	return album
+}
+
+func firstNonBlank(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+// qobuzArtistImageBase is where hash/format artist pictures are hosted.
+const qobuzArtistImageBase = "https://static.qobuz.com/images/artists/"
