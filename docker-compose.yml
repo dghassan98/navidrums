@@ -1,38 +1,27 @@
 services:
   navidrums:
-    build: .
+    build:
+      context: .
+      args:
+        # Surfaced at /version so a deployment can be checked against the repo.
+        VERSION: ${VERSION:-dev}
     container_name: navidrums
     ports:
-      - "8080:8080"
+      - "5236:8080"
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - ./downloads:/music
+      - C:/music/slskd/tracks/:/music
       - ./data:/data
     env_file:
       - .env
     restart: unless-stopped
     networks:
       - navidrums
-  navidrome:
-    image: deluan/navidrome:latest
-    container_name: navidrome
-    ports:
-      - "4533:4533"
-    volumes:
-      - ./downloads:/music
-      - ./navidrome_data:/data
-    environment:
-      - ND_SCANSCHEDULE=@every 24h
-      - ND_LOGLEVEL=info
-      - ND_PORT=4533
-      - ND_AUTHREQUIRED=true
-      - ND_DEFAULTUSER_NAME=navidrums
-      - ND_DEFAULTUSER_PASSWORD=admin
-      - ND_DEFAULTUSER_EMAIL=admin@navidrums.local
-    restart: unless-stopped
-    networks:
-      - navidrums
+      - ghassi_cloud
 
 networks:
+  ghassi_cloud:
+    external: true
+    driver: bridge
   navidrums:
     driver: bridge

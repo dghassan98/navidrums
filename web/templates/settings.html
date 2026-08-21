@@ -22,6 +22,41 @@
 </div>
 
 <div class="section">
+    <h2>Notifications</h2>
+    <p class="hint">Posts to a webhook when a download finishes, fails or is cancelled. Works with a Discord
+        webhook URL directly, or an Apprise API endpoint which fans out to whatever you have configured there.
+        Overrides the <code>NOTIFY_URL</code> environment variable and applies without a restart.</p>
+
+    <div class="flex flex-col gap-3 mt-2">
+        <div class="flex gap-2 items-center">
+            <label class="w-52">Webhook URL:</label>
+            <input type="password" id="notify-url" class="form-input" placeholder="not set">
+        </div>
+        <p class="hint">Leave blank to keep the current value. Type <code>-</code> to clear it and fall back to
+            the environment. Treat this URL as a password: anyone holding it can post to your channel.</p>
+        <div class="toolbar-row">
+            <button class="btn btn-primary" onclick="saveNotifyURL()">Save webhook</button>
+            <button class="btn btn-outline" onclick="testNotification()">Send test</button>
+        </div>
+    </div>
+
+    <div id="notify-status" class="mt-4"></div>
+
+    <details class="callout mt-4">
+        <summary>Which events are sent?</summary>
+        <div class="callout-body">
+            <ul>
+                <li><strong>Finished</strong>, <strong>failed</strong> and <strong>cancelled</strong> downloads.</li>
+                <li>Album, playlist and artist downloads notify <strong>once</strong> when the whole thing
+                    settles &mdash; not once per track, which would flood the channel.</li>
+                <li>Single-track downloads notify individually.</li>
+                <li>A failed notification never fails the download; it is logged and dropped.</li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+<div class="section">
     <h2>Qobuz Credentials</h2>
     <p class="hint">Used by the QOBUZ DIRECT provider. Values saved here override the matching
         <code>QOBUZ_*</code> environment variables and take effect without a restart. They are stored in the
@@ -728,7 +763,60 @@
                 ['qobuz-app-secret', 'qobuz-auth-token'].forEach(id => {
                     document.getElementById(id).value = '';
                 });
-                loadQobuzCredentials();
+            
+    function loadNotifySettings() {
+        fetch('/htmx/notifications', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(data => {
+                const el = document.getElementById('notify-url');
+                el.placeholder = data.configured ? data.masked : 'not set';
+                const box = document.getElementById('notify-status');
+                if (!data.configured) {
+                    box.innerHTML = '<p class="hint">No webhook configured.</p>';
+                } else {
+                    box.innerHTML = '<p class="hint">Configured (' + data.kind + ') from ' +
+                        (data.from_settings ? 'Settings' : 'environment') + '.</p>';
+                }
+            });
+    }
+
+    function saveNotifyURL() {
+        const el = document.getElementById('notify-url');
+        const raw = el.value.trim();
+        if (raw === '') {
+            document.getElementById('notify-status').innerHTML = '<p class="hint">Nothing to save.</p>';
+            return;
+        }
+        const value = raw === '-' ? '' : raw;
+        fetch('/htmx/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: value }),
+        })
+            .then(r => r.ok ? r.json() : r.text().then(t => Promise.reject(t)))
+            .then(() => { el.value = ''; loadNotifySettings(); })
+            .catch(err => {
+                document.getElementById('notify-status').innerHTML =
+                    '<p class="text-danger">Failed to save: ' + err + '</p>';
+            });
+    }
+
+    function testNotification() {
+        const box = document.getElementById('notify-status');
+        box.innerHTML = '<p class="hint">Sending test notification...</p>';
+        fetch('/htmx/notifications/test', { method: 'POST' })
+            .then(r => r.ok ? r.json().then(() => null) : r.json().then(j => Promise.reject(j.error || 'failed')))
+            .then(() => {
+                box.innerHTML = '<p class="text-success">Test sent. Check your channel.</p>';
+            })
+            .catch(err => {
+                box.innerHTML = '<p class="text-danger">Test failed: ' + err + '</p>';
+            });
+    }
+
+    loadNotifySettings();
+
+    loadQobuzCredentials();
                 checkQobuzStatus();
             })
             .catch(err => {

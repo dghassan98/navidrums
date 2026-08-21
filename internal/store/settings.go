@@ -54,4 +54,5 @@ const (
 	SettingQobuzAuthToken          = "qobuz_auth_token"
 	SettingQobuzEmail              = "qobuz_email"
 	SettingQobuzPasswordMD5        = "qobuz_password_md5"
+	SettingNotifyURL               = "notify_url"
 )

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/cesargomez89/navidrums/internal/domain"
 	"github.com/cesargomez89/navidrums/internal/logger"
 	"github.com/cesargomez89/navidrums/internal/musicbrainz"
+	"github.com/cesargomez89/navidrums/internal/notify"
 	"github.com/cesargomez89/navidrums/internal/storage"
 	"github.com/cesargomez89/navidrums/internal/store"
 	"github.com/cesargomez89/navidrums/internal/tagging"
@@ -40,6 +42,7 @@ type Worker struct {
 	musicBrainzClient musicbrainz.ClientInterface
 	enricher          *app.MetadataEnricher
 	dispatcher        *Dispatcher
+	notifier          *notify.Notifier
 	cancel            context.CancelFunc
 	wg                sync.WaitGroup
 	MaxConcurrent     int
@@ -62,6 +65,17 @@ func NewWorker(repo *store.DB, settingsRepo *store.SettingsRepo, pm *catalog.Pro
 		ctx:             ctx,
 		cancel:          cancel,
 	}
+
+	// Resolved per send, so a webhook saved in Settings applies immediately and
+	// overrides NOTIFY_URL without a restart.
+	worker.notifier = notify.New(func() string {
+		if settingsRepo != nil {
+			if stored, err := settingsRepo.Get(store.SettingNotifyURL); err == nil && stored != "" {
+				return stored
+			}
+		}
+		return cfg.NotifyURL
+	}, worker.Logger)
 
 	worker.downloader = app.NewDownloader(pm, cfg)
 	worker.playlistGenerator = app.NewPlaylistGenerator(cfg, repo)
@@ -318,6 +332,59 @@ func (w *Worker) runJob(ctx context.Context, job *domain.Job) {
 			_ = w.Repo.UpdateJobError(job.ID, "Unknown job type")
 		}
 	}
+
+	w.notifyJobOutcome(job, logger)
+}
+
+// notifyJobOutcome reports a finished job to the configured webhook.
+//
+// Tracks that belong to an album or playlist are skipped: the container job
+// reports once when it finishes, instead of one notification per track.
+func (w *Worker) notifyJobOutcome(job *domain.Job, jobLogger *slog.Logger) {
+	if !w.notifier.Enabled() {
+		return
+	}
+
+	final, err := w.Repo.GetJob(job.ID)
+	if err != nil || final == nil {
+		return
+	}
+
+	if final.Type == domain.JobTypeTrack && final.GetParentJobID() != "" {
+		return
+	}
+
+	var status notify.Status
+	switch final.Status {
+	case domain.JobStatusCompleted:
+		status = notify.StatusCompleted
+	case domain.JobStatusFailed:
+		status = notify.StatusFailed
+	case domain.JobStatusCancelled:
+		status = notify.StatusCancelled
+	default:
+		return // still running, queued or decomposed: nothing settled yet
+	}
+
+	event := notify.Event{
+		Status:  status,
+		JobType: string(final.Type),
+	}
+	if final.Error != nil {
+		event.Error = *final.Error
+	}
+
+	// Put a name on it rather than a bare provider ID.
+	if track, trackErr := w.Repo.GetTrackByProviderID(final.GetSourceID()); trackErr == nil && track != nil {
+		event.Title = track.Title
+		event.Artist = track.Artist
+		event.Album = track.Album
+	} else if event.Title == "" {
+		event.Title = final.GetSourceID()
+	}
+
+	jobLogger.Debug("Sending download notification", "status", status)
+	w.notifier.Notify(w.ctx, event)
 }
 
 func (w *Worker) isCancelled(id string) bool {

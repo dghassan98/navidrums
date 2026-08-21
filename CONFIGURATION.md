@@ -70,6 +70,36 @@ Basic HTTP authentication is optional:
 - Leave `NAVIDRUMS_PASSWORD` empty to disable authentication
 - When password is set, `NAVIDRUMS_USERNAME` must also be set
 
+## Notifications
+
+Set `NOTIFY_URL`, or fill it in under **Settings → Notifications**, to be told when downloads finish. A
+Discord webhook URL works directly; anything else is treated as an [Apprise](https://github.com/caronc/apprise-api)
+API endpoint, which fans out to whatever you have configured there. The shape is chosen from the URL, and a
+value saved in Settings overrides the environment without a restart.
+
+Album, playlist and artist downloads notify **once** when the whole job settles, rather than once per track,
+which would flood a channel. Standalone track downloads notify individually. A webhook failure is logged and
+dropped: it never fails or delays a download.
+
+The webhook URL is a credential — anyone holding it can post to your channel — so it is masked in the UI and
+is best kept in the environment on a shared machine.
+
+## Checking the running version
+
+`GET /version` reports the build, so a deployment can be checked against the repository:
+
+```json
+{"version": "5042db3", "commit": "5042db39...", "modified": false, "built": "...", "go": "go1.27.0"}
+```
+
+`.dockerignore` excludes `.git`, so the toolchain cannot stamp the revision inside the image. Pass it in:
+
+```bash
+VERSION=$(git rev-parse --short HEAD) docker compose up -d --build
+```
+
+Without it the image reports `dev`, which is itself a useful signal that the build was not stamped.
+
 ## Settings Access
 
 Set `NAVIDRUMS_ADMIN_PASSWORD` to password protect the Settings page. The gate covers the page **and** every

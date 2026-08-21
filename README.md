@@ -68,6 +68,7 @@ Optimized for low-end hardware.
 - **Provider Management**: Add, reorder, edit, and remove Monochrome, HiFi and Qobuz provider URLs; select which provider type to use per operation (metadata, download, streaming)
 - **Qobuz Credential Health**: Enter Qobuz credentials in Settings and test them with one click — an expired auth token and a rotated app secret are reported separately, so you know which one to replace
 - **Password-Gated Settings**: Set `NAVIDRUMS_ADMIN_PASSWORD` to require a password before Settings can be viewed or changed
+- **Download Notifications**: Posts to a Discord webhook or Apprise endpoint when a download finishes, fails or is cancelled — once per album rather than once per track
 - **Genre Mapping**: Customize how MusicBrainz genres are normalized (maps sub-genres to main genres)
 - **Genre Separator**: Configure the separator used when writing multiple genres to audio tags
 - **Theme Selector**: Override the default application theme configured via environment variable
@@ -128,6 +129,7 @@ Environment variables:
 | `NAVIDRUMS_PASSWORD` | (empty) | Password for HTTP basic authentication (empty disables auth) |
 | `SKIP_AUTH` | `false` | Set to `true` to disable authentication entirely |
 | `NAVIDRUMS_ADMIN_PASSWORD` | (empty) | Password gating the Settings page; empty leaves Settings open |
+| `NOTIFY_URL` | (empty) | Discord webhook or Apprise API endpoint for download notifications |
 | `CACHE_TTL` | `12h` | Provider response cache TTL (e.g., `1h`, `24h`, `7d`) |
 | `MUSICBRAINZ_CACHE_TTL` | `7d` | MusicBrainz API response cache TTL (e.g., `1d`, `168h`) |
 | `MUSICBRAINZ_URL` | `https://musicbrainz.org/ws/2` | MusicBrainz API endpoint for metadata enrichment |

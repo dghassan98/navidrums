@@ -104,6 +104,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/htmx/qobuz-credentials", h.SetQobuzCredentialsHTMX)
 		r.Get("/htmx/qobuz-status", h.GetQobuzStatusHTMX)
 
+		r.Get("/htmx/notifications", h.GetNotificationsHTMX)
+		r.Post("/htmx/notifications", h.SetNotificationsHTMX)
+		r.Post("/htmx/notifications/test", h.TestNotificationHTMX)
+
 		r.Get("/htmx/providers", h.GetProvidersHTMX)
 		r.Post("/htmx/providers/reorder", h.ReorderProvidersHTMX)
 		r.Post("/htmx/provider", h.AddProviderHTMX)
@@ -139,6 +143,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/htmx/quality/reset", h.ResetQualityHTMX)
 	})
 
+	r.Get("/version", h.VersionHTMX)
 	r.Get("/img", h.ImageProxy)
 
 	r.Get("/htmx/moods", h.GetMoodsHTMX)
