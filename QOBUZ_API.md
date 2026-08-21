@@ -104,6 +104,17 @@ Qobuz downgrades on its own when a release is not available at the requested tie
 streamed at all comes back with an empty `url` and a `restrictions[].code`, which Navidrums surfaces as
 `ErrQobuzNotStreamable`.
 
+### Checking credential health
+
+`GET /htmx/qobuz-status` probes Qobuz and reports `app_id`, `account` and `app_secret` independently, which
+matters because they fail for different reasons. Two probes are used:
+
+1. `favorite/getUserFavorites` — needs a valid auth token but **no** signature, so a 401 here isolates an
+   expired token. This matters because a token supplied via `QOBUZ_AUTH_TOKEN` is otherwise never exercised
+   until a real request fails.
+2. `track/getFileUrl` on a fixed catalogue track — a 400 means the signature did not verify, i.e. the app
+   secret has been rotated. Nothing is downloaded; only the status code is read.
+
 ### Design Notes
 
 - The auth token is cached in memory and refreshed automatically on a 401.

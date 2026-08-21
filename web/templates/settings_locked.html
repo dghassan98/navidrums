@@ -1,0 +1,18 @@
+{{define "content"}}
+<h1>Settings</h1>
+
+<div class="section">
+    <h2>Locked</h2>
+    <p class="hint">Settings are password protected. Enter the admin password to unlock them for this browser.</p>
+
+    <form class="provider-form mt-4"
+          hx-post="/htmx/admin/unlock"
+          hx-target="#unlock-status"
+          hx-swap="innerHTML">
+        <input type="password" name="password" placeholder="Admin password" autocomplete="current-password" required>
+        <button type="submit" class="btn-lg btn-primary">Unlock</button>
+    </form>
+
+    <div id="unlock-status" class="mt-2"></div>
+</div>
+{{end}}

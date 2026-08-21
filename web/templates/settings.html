@@ -14,6 +14,44 @@
 </div>
 
 <div class="section">
+    <h2>Settings Access</h2>
+    <p class="hint" id="admin-lock-hint"></p>
+    <div class="toolbar-row">
+        <button class="btn btn-outline" hx-post="/htmx/admin/lock" hx-swap="none">Lock settings</button>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Qobuz Credentials</h2>
+    <p class="hint">Used by the QOBUZ DIRECT provider. Values saved here override the matching
+        <code>QOBUZ_*</code> environment variables and take effect without a restart. They are stored in the
+        Navidrums database in plain text, so prefer the environment on a shared machine.</p>
+
+    <div class="flex flex-col gap-3 mt-2">
+        <div class="flex gap-2 items-center">
+            <label class="w-52">App ID:</label>
+            <input type="text" id="qobuz-app-id" class="form-input" placeholder="798273057">
+        </div>
+        <div class="flex gap-2 items-center">
+            <label class="w-52">App secret:</label>
+            <input type="password" id="qobuz-app-secret" class="form-input" placeholder="unchanged">
+        </div>
+        <div class="flex gap-2 items-center">
+            <label class="w-52">Auth token:</label>
+            <input type="password" id="qobuz-auth-token" class="form-input" placeholder="unchanged">
+        </div>
+        <p class="hint">Leave a field blank to keep the current value. Type <code>-</code> to clear it and fall
+            back to the environment. See <code>QOBUZ_API.md</code> for where to read these from the web player.</p>
+        <div class="toolbar-row">
+            <button class="btn btn-primary" onclick="saveQobuzCredentials()">Save credentials</button>
+            <button class="btn btn-outline" onclick="checkQobuzStatus()">Test connection</button>
+        </div>
+    </div>
+
+    <div id="qobuz-status" class="mt-4"></div>
+</div>
+
+<div class="section">
     <h2>QOBUZ DIRECT</h2>
     <p class="hint">The official Qobuz API, used with <strong>your own subscription</strong>. Requires
         <code>QOBUZ_APP_ID</code>, <code>QOBUZ_APP_SECRET</code>, <code>QOBUZ_EMAIL</code> and
@@ -606,6 +644,89 @@
                 }
             });
     }
+
+
+    function qobuzFieldValue(id) {
+        const el = document.getElementById(id);
+        const raw = el.value.trim();
+        if (raw === '') return undefined;          // untouched: keep stored value
+        if (raw === '-') return '';                 // explicit clear
+        return raw;
+    }
+
+    function saveQobuzCredentials() {
+        const payload = {};
+        const fields = {
+            app_id: 'qobuz-app-id',
+            app_secret: 'qobuz-app-secret',
+            auth_token: 'qobuz-auth-token',
+        };
+        for (const [field, id] of Object.entries(fields)) {
+            const value = qobuzFieldValue(id);
+            if (value !== undefined) payload[field] = value;
+        }
+        if (Object.keys(payload).length === 0) {
+            document.getElementById('qobuz-status').innerHTML =
+                '<p class="hint">Nothing to save.</p>';
+            return;
+        }
+        fetch('/htmx/qobuz-credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(() => {
+                ['qobuz-app-secret', 'qobuz-auth-token'].forEach(id => {
+                    document.getElementById(id).value = '';
+                });
+                loadQobuzCredentials();
+                checkQobuzStatus();
+            })
+            .catch(err => {
+                document.getElementById('qobuz-status').innerHTML =
+                    '<p class="text-danger">Failed to save (' + err + ').</p>';
+            });
+    }
+
+    function loadQobuzCredentials() {
+        fetch('/htmx/qobuz-credentials', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('qobuz-app-id').value = data.app_id || '';
+                document.getElementById('qobuz-app-secret').placeholder = data.app_secret || 'not set';
+                document.getElementById('qobuz-auth-token').placeholder = data.auth_token || 'not set';
+            });
+    }
+
+    function qobuzStateBadge(label, state) {
+        const text = { ok: 'OK', missing: 'not set', rejected: 'rejected', unchecked: 'not checked' }[state] || state;
+        const cls = state === 'ok' ? 'text-success' : (state === 'rejected' ? 'text-danger' : 'text-dim');
+        return '<li>' + label + ': <strong class="' + cls + '">' + text + '</strong></li>';
+    }
+
+    function checkQobuzStatus() {
+        const box = document.getElementById('qobuz-status');
+        box.innerHTML = '<p class="hint">Checking with Qobuz...</p>';
+        fetch('/htmx/qobuz-status', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(s => {
+                box.innerHTML =
+                    '<ul class="mb-2">' +
+                    qobuzStateBadge('App ID', s.app_id) +
+                    qobuzStateBadge('Account / token', s.account) +
+                    qobuzStateBadge('App secret', s.app_secret) +
+                    '</ul>' +
+                    '<p class="' + (s.can_download ? 'text-success' : 'text-danger') + '">' + s.message + '</p>' +
+                    '<p class="hint">Browsing: ' + (s.can_browse ? 'yes' : 'no') +
+                    ' &middot; Downloads: ' + (s.can_download ? 'yes' : 'no') + '</p>';
+            })
+            .catch(() => {
+                box.innerHTML = '<p class="text-danger">Could not reach the status endpoint.</p>';
+            });
+    }
+
+    loadQobuzCredentials();
 
     loadProviders('monochrome');
     loadProviders('qobuz-direct');

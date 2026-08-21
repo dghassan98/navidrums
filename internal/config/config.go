@@ -44,6 +44,7 @@ type Config struct {
 	QobuzEmail            string
 	QobuzPasswordMD5      string
 	QobuzAuthToken        string
+	AdminPassword         string
 }
 
 // Load loads configuration from environment variables with defaults
@@ -80,6 +81,7 @@ func Load() *Config {
 		QobuzEmail:            getEnv("QOBUZ_EMAIL", ""),
 		QobuzPasswordMD5:      qobuzPasswordMD5(),
 		QobuzAuthToken:        getEnv("QOBUZ_AUTH_TOKEN", ""),
+		AdminPassword:         getEnv("NAVIDRUMS_ADMIN_PASSWORD", ""),
 	}
 }
 

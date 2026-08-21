@@ -49,4 +49,9 @@ const (
 	SettingQuality                 = "quality"
 	SettingMoodList                = "mood_list"
 	SettingLanguageList            = "language_list"
+	SettingQobuzAppID              = "qobuz_app_id"
+	SettingQobuzAppSecret          = "qobuz_app_secret"
+	SettingQobuzAuthToken          = "qobuz_auth_token"
+	SettingQobuzEmail              = "qobuz_email"
+	SettingQobuzPasswordMD5        = "qobuz_password_md5"
 )

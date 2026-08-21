@@ -97,6 +97,7 @@ See `CONFIGURATION.md` / `README.md` for the full list. These are the ones agent
 | `PLAY_QUALITY` | HIGH | Streaming preview quality |
 | `THEME` | golden | UI theme |
 | `SKIP_AUTH` | false | Behind reverse proxy? set true |
+| `NAVIDRUMS_ADMIN_PASSWORD` | (empty) | Gates the Settings page and every settings endpoint |
 | `DISABLE_RATE_LIMIT` | false | Behind Cloudflare? set true |
 
 ---

@@ -70,6 +70,34 @@ Basic HTTP authentication is optional:
 - Leave `NAVIDRUMS_PASSWORD` empty to disable authentication
 - When password is set, `NAVIDRUMS_USERNAME` must also be set
 
+## Settings Access
+
+Set `NAVIDRUMS_ADMIN_PASSWORD` to password protect the Settings page. The gate covers the page **and** every
+endpoint that reads or changes settings, so it cannot be bypassed by calling the API directly. Unlocking sets
+an HttpOnly cookie valid for 12 hours; it is an HMAC keyed by the password, so changing the password
+immediately invalidates every existing session. "Lock settings" in the UI ends the session early.
+
+Leaving the variable unset leaves Settings open, which is the previous behaviour. This is separate from
+`NAVIDRUMS_PASSWORD`, which protects the whole application.
+
+## Qobuz Credentials
+
+Qobuz credentials can come from the environment or from **Settings → Qobuz Credentials**. A value saved in
+Settings overrides the matching environment variable and applies without a restart; clearing it falls back to
+the environment. Values entered in the UI are stored in the Navidrums database in plain text, so prefer the
+environment on a shared machine. A plaintext password is hashed to MD5 before storage.
+
+**Test connection** reports each credential separately, because they fail independently:
+
+| Reported | Meaning |
+|---|---|
+| App ID `rejected` | the app id is not accepted; re-read it from the web player bundle |
+| Account `rejected` | the auth token expired, or the password changed |
+| App secret `rejected` | Qobuz rotated the secret; browsing still works but downloads fail |
+
+`app_id` and `app_secret` are read from the Qobuz web player bundle and Qobuz rotates them, and auth tokens
+expire, so expect to refresh these occasionally. See [QOBUZ_API.md](QOBUZ_API.md) for where to find them.
+
 ## Provider Management
 
 Navidrums supports four provider types: **Monochrome** (see [MONOCHROME_API.md](MONOCHROME_API.md)), **Qobuz Direct** (the official Qobuz API with your own subscription, see [QOBUZ_API.md](QOBUZ_API.md)), **HiFi** (Tidal API proxy) and **Qobuz** (a shared Qobuz proxy). Each type can have multiple endpoint URLs configured as fallbacks.

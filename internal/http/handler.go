@@ -70,7 +70,6 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/htmx/cancel/{id}", h.CancelJobHTMX)
 	r.Post("/htmx/retry/{id}", h.RetryJobHTMX)
 	r.Post("/htmx/history/clear", h.ClearHistoryHTMX)
-	r.Get("/settings", h.SettingsPage)
 
 	r.Get("/downloads", h.DownloadsPage)
 	r.Get("/htmx/downloads", h.DownloadsHTMX)
@@ -91,39 +90,54 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/htmx/track/{id}/enrich", h.EnrichTrackHTMX)
 	r.Post("/htmx/track/{id}/enrich-hifi", h.EnrichHiFiHTMX)
 
-	r.Get("/htmx/providers", h.GetProvidersHTMX)
-	r.Post("/htmx/providers/reorder", h.ReorderProvidersHTMX)
-	r.Post("/htmx/provider", h.AddProviderHTMX)
-	r.Delete("/htmx/provider", h.RemoveProviderHTMX)
+	// Settings and everything that mutates them sit behind the admin gate,
+	// which is a no-op when NAVIDRUMS_ADMIN_PASSWORD is unset.
+	r.Post("/htmx/admin/unlock", h.AdminUnlockHTMX)
+	r.Post("/htmx/admin/lock", h.AdminLockHTMX)
 
-	r.Get("/htmx/default-apis", h.GetDefaultAPIsHTMX)
-	r.Post("/htmx/default-apis", h.SetDefaultAPIHTMX)
+	r.Group(func(r chi.Router) {
+		r.Use(h.requireAdmin)
 
-	r.Get("/htmx/genre-map", h.GetGenreMapHTMX)
-	r.Post("/htmx/genre-map", h.SetGenreMapHTMX)
-	r.Post("/htmx/genre-map/reset", h.ResetGenreMapHTMX)
+		r.Get("/settings", h.SettingsPage)
 
-	r.Get("/htmx/mood-list", h.GetMoodListHTMX)
-	r.Post("/htmx/mood-list", h.SetMoodListHTMX)
-	r.Post("/htmx/mood-list/reset", h.ResetMoodListHTMX)
+		r.Get("/htmx/qobuz-credentials", h.GetQobuzCredentialsHTMX)
+		r.Post("/htmx/qobuz-credentials", h.SetQobuzCredentialsHTMX)
+		r.Get("/htmx/qobuz-status", h.GetQobuzStatusHTMX)
 
-	r.Get("/htmx/language-list", h.GetLanguageListHTMX)
-	r.Post("/htmx/language-list", h.SetLanguageListHTMX)
-	r.Post("/htmx/language-list/reset", h.ResetLanguageListHTMX)
+		r.Get("/htmx/providers", h.GetProvidersHTMX)
+		r.Post("/htmx/providers/reorder", h.ReorderProvidersHTMX)
+		r.Post("/htmx/provider", h.AddProviderHTMX)
+		r.Delete("/htmx/provider", h.RemoveProviderHTMX)
 
-	r.Get("/htmx/genre-separator", h.GetGenreSeparatorHTMX)
-	r.Post("/htmx/genre-separator", h.SetGenreSeparatorHTMX)
+		r.Get("/htmx/default-apis", h.GetDefaultAPIsHTMX)
+		r.Post("/htmx/default-apis", h.SetDefaultAPIHTMX)
 
-	r.Get("/htmx/theme", h.GetThemeHTMX)
-	r.Post("/htmx/theme", h.SetThemeHTMX)
-	r.Post("/htmx/theme/reset", h.ResetThemeHTMX)
+		r.Get("/htmx/genre-map", h.GetGenreMapHTMX)
+		r.Post("/htmx/genre-map", h.SetGenreMapHTMX)
+		r.Post("/htmx/genre-map/reset", h.ResetGenreMapHTMX)
 
-	r.Get("/htmx/force-download", h.GetForceDownloadHTMX)
-	r.Post("/htmx/force-download", h.SetForceDownloadHTMX)
+		r.Get("/htmx/mood-list", h.GetMoodListHTMX)
+		r.Post("/htmx/mood-list", h.SetMoodListHTMX)
+		r.Post("/htmx/mood-list/reset", h.ResetMoodListHTMX)
 
-	r.Get("/htmx/quality", h.GetQualityHTMX)
-	r.Post("/htmx/quality", h.SetQualityHTMX)
-	r.Post("/htmx/quality/reset", h.ResetQualityHTMX)
+		r.Get("/htmx/language-list", h.GetLanguageListHTMX)
+		r.Post("/htmx/language-list", h.SetLanguageListHTMX)
+		r.Post("/htmx/language-list/reset", h.ResetLanguageListHTMX)
+
+		r.Get("/htmx/genre-separator", h.GetGenreSeparatorHTMX)
+		r.Post("/htmx/genre-separator", h.SetGenreSeparatorHTMX)
+
+		r.Get("/htmx/theme", h.GetThemeHTMX)
+		r.Post("/htmx/theme", h.SetThemeHTMX)
+		r.Post("/htmx/theme/reset", h.ResetThemeHTMX)
+
+		r.Get("/htmx/force-download", h.GetForceDownloadHTMX)
+		r.Post("/htmx/force-download", h.SetForceDownloadHTMX)
+
+		r.Get("/htmx/quality", h.GetQualityHTMX)
+		r.Post("/htmx/quality", h.SetQualityHTMX)
+		r.Post("/htmx/quality/reset", h.ResetQualityHTMX)
+	})
 
 	r.Get("/htmx/moods", h.GetMoodsHTMX)
 	r.Get("/htmx/languages", h.GetLanguagesHTMX)

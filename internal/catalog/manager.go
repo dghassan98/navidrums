@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -41,8 +42,9 @@ func NewProviderManager(db *store.DB, settings *store.SettingsRepo, cacheTTL tim
 	}
 }
 
-// SetQobuzCredentials supplies the credentials the qobuz-direct provider
-// authenticates with, dropping any chains already built without them.
+// SetQobuzCredentials supplies the credentials configured through the
+// environment. They act as defaults: anything saved in Settings wins, so the
+// UI can update credentials without a restart.
 func (m *ProviderManager) SetQobuzCredentials(creds QobuzCredentials) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -50,11 +52,50 @@ func (m *ProviderManager) SetQobuzCredentials(creds QobuzCredentials) {
 	m.chains = nil
 }
 
-// QobuzCredentials returns the configured Qobuz credentials.
+// QobuzCredentials returns the effective credentials: values stored in
+// Settings, each falling back to the environment when unset.
 func (m *ProviderManager) QobuzCredentials() QobuzCredentials {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.qobuzCreds
+	creds := m.qobuzCreds
+	m.mu.RUnlock()
+
+	if m.settings == nil {
+		return creds
+	}
+
+	stored := func(key, fallback string) string {
+		if val, err := m.settings.Get(key); err == nil && val != "" {
+			return val
+		}
+		return fallback
+	}
+
+	creds.AppID = stored(store.SettingQobuzAppID, creds.AppID)
+	creds.AppSecret = stored(store.SettingQobuzAppSecret, creds.AppSecret)
+	creds.AuthToken = stored(store.SettingQobuzAuthToken, creds.AuthToken)
+	creds.Email = stored(store.SettingQobuzEmail, creds.Email)
+	creds.PasswordMD5 = stored(store.SettingQobuzPasswordMD5, creds.PasswordMD5)
+
+	return creds
+}
+
+// CheckQobuzCredentials probes Qobuz with the effective credentials.
+func (m *ProviderManager) CheckQobuzCredentials(ctx context.Context) *QobuzStatus {
+	provider := NewQobuzDirectProvider(m.qobuzBaseURL(), m.QobuzCredentials())
+	return provider.CheckCredentials(ctx)
+}
+
+// qobuzBaseURL returns the first configured qobuz-direct endpoint, or "" to let
+// the provider fall back to the official API.
+func (m *ProviderManager) qobuzBaseURL() string {
+	if m.providers == nil {
+		return ""
+	}
+	records, err := m.providers.ListByType(string(ProviderTypeQobuzDirect))
+	if err != nil || len(records) == 0 {
+		return ""
+	}
+	return records[0].URL
 }
 
 func (m *ProviderManager) readSetting(key string) ProviderType {

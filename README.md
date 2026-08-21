@@ -66,6 +66,8 @@ Optimized for low-end hardware.
 
 ### Settings
 - **Provider Management**: Add, reorder, edit, and remove Monochrome, HiFi and Qobuz provider URLs; select which provider type to use per operation (metadata, download, streaming)
+- **Qobuz Credential Health**: Enter Qobuz credentials in Settings and test them with one click — an expired auth token and a rotated app secret are reported separately, so you know which one to replace
+- **Password-Gated Settings**: Set `NAVIDRUMS_ADMIN_PASSWORD` to require a password before Settings can be viewed or changed
 - **Genre Mapping**: Customize how MusicBrainz genres are normalized (maps sub-genres to main genres)
 - **Genre Separator**: Configure the separator used when writing multiple genres to audio tags
 - **Theme Selector**: Override the default application theme configured via environment variable
@@ -125,6 +127,7 @@ Environment variables:
 | `NAVIDRUMS_USERNAME` | `navidrums` | Username for HTTP basic authentication |
 | `NAVIDRUMS_PASSWORD` | (empty) | Password for HTTP basic authentication (empty disables auth) |
 | `SKIP_AUTH` | `false` | Set to `true` to disable authentication entirely |
+| `NAVIDRUMS_ADMIN_PASSWORD` | (empty) | Password gating the Settings page; empty leaves Settings open |
 | `CACHE_TTL` | `12h` | Provider response cache TTL (e.g., `1h`, `24h`, `7d`) |
 | `MUSICBRAINZ_CACHE_TTL` | `7d` | MusicBrainz API response cache TTL (e.g., `1d`, `168h`) |
 | `MUSICBRAINZ_URL` | `https://musicbrainz.org/ws/2` | MusicBrainz API endpoint for metadata enrichment |
@@ -133,6 +136,7 @@ Environment variables:
 | `RATE_LIMIT_BURST` | `10` | Burst requests allowed beyond rate limit |
 | `DISABLE_RATE_LIMIT` | `false` | Disable rate limiting (use when behind Cloudflare) |
 | `THEME` | `golden` | Default application theme (can be overridden in Settings) |
+| `QOBUZ_AUTH_TOKEN` | (empty) | Qobuz auth token from a logged-in web player; replaces email/password |
 | `QOBUZ_APP_ID` | (empty) | Qobuz application id, required by the `qobuz-direct` provider |
 | `QOBUZ_APP_SECRET` | (empty) | Qobuz application secret, used to sign file-URL requests |
 | `QOBUZ_EMAIL` | (empty) | Your Qobuz account email |
