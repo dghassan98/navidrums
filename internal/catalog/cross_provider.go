@@ -2,22 +2,28 @@ package catalog
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 
 	"github.com/cesargomez89/navidrums/internal/domain"
 )
 
+// crossProviderFallback serves metadata from the selected provider chain but
+// lets any other configured provider type rescue a failed stream.
 type crossProviderFallback struct {
-	primary  Provider
-	fallback Provider
+	primary   Provider
+	fallbacks []Provider
 }
 
 func (c *crossProviderFallback) GetStream(ctx context.Context, trackID string, isrc string, quality string) (io.ReadCloser, string, error) {
+	var errs []error
+
 	stream, mimeType, err := c.primary.GetStream(ctx, trackID, isrc, quality)
 	if err == nil {
 		return stream, mimeType, nil
 	}
+	errs = append(errs, fmt.Errorf("selected provider: %w", err))
 
 	isrc = c.enrichISRC(ctx, trackID, isrc)
 
@@ -29,15 +35,22 @@ func (c *crossProviderFallback) GetStream(ctx context.Context, trackID string, i
 			)
 			return stream, mimeType, nil
 		}
+		errs = append(errs, fmt.Errorf("selected provider with isrc %s: %w", isrc, err))
 	}
 
-	stream, mimeType, err = c.fallback.GetStream(ctx, trackID, isrc, quality)
-	if err != nil {
-		slog.Error("cross-provider: both providers failed",
-			"track_id", trackID, "isrc", isrc, "err", err,
-		)
+	for _, fallback := range c.fallbacks {
+		stream, mimeType, err = fallback.GetStream(ctx, trackID, isrc, quality)
+		if err == nil {
+			return stream, mimeType, nil
+		}
+		errs = append(errs, fmt.Errorf("fallback provider: %w", err))
 	}
-	return stream, mimeType, err
+
+	joined := joinErrors(errs)
+	slog.Error("cross-provider: all providers failed",
+		"track_id", trackID, "isrc", isrc, "err", joined,
+	)
+	return nil, "", joined
 }
 
 func (c *crossProviderFallback) enrichISRC(ctx context.Context, trackID, isrc string) string {
@@ -48,8 +61,10 @@ func (c *crossProviderFallback) enrichISRC(ctx context.Context, trackID, isrc st
 	if track, err := c.primary.GetTrack(ctx, trackID); err == nil && track.ISRC != "" {
 		return track.ISRC
 	}
-	if track, err := c.fallback.GetTrack(ctx, trackID); err == nil && track.ISRC != "" {
-		return track.ISRC
+	for _, fallback := range c.fallbacks {
+		if track, err := fallback.GetTrack(ctx, trackID); err == nil && track.ISRC != "" {
+			return track.ISRC
+		}
 	}
 
 	slog.Warn("cross-provider: could not enrich ISRC", "track_id", trackID)
@@ -92,11 +107,16 @@ func (c *crossProviderFallback) GetRecommendations(ctx context.Context, id strin
 	return c.primary.GetRecommendations(ctx, id)
 }
 
-func oppositeProviderType(pt ProviderType) ProviderType {
-	if pt == ProviderTypeHifi {
-		return ProviderTypeQobuz
+// fallbackProviderTypes lists the other provider types that could rescue a
+// stream, in the order they should be tried.
+func fallbackProviderTypes(primary ProviderType) []ProviderType {
+	types := make([]ProviderType, 0, len(ProviderTypes)-1)
+	for _, pt := range ProviderTypes {
+		if pt != primary {
+			types = append(types, pt)
+		}
 	}
-	return ProviderTypeHifi
+	return types
 }
 
 func (m *ProviderManager) hasProvidersOfType(pt ProviderType) bool {

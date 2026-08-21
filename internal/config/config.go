@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/md5" //nolint:gosec // Qobuz specifies MD5 for its password hash
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,6 +39,11 @@ type Config struct {
 	DisableRateLimit      bool
 	LyricsFallbackEnabled bool
 	LyricsFallbackURL     string
+	QobuzAppID            string
+	QobuzAppSecret        string
+	QobuzEmail            string
+	QobuzPasswordMD5      string
+	QobuzAuthToken        string
 }
 
 // Load loads configuration from environment variables with defaults
@@ -68,7 +75,27 @@ func Load() *Config {
 		FFprobePath:           getEnv("FFPROBE_PATH", ""),
 		LyricsFallbackEnabled: getEnvBool("LYRICS_FALLBACK_ENABLED", true),
 		LyricsFallbackURL:     getEnv("LYRICS_FALLBACK_URL", "https://lrclib.net/api/get"),
+		QobuzAppID:            getEnv("QOBUZ_APP_ID", ""),
+		QobuzAppSecret:        getEnv("QOBUZ_APP_SECRET", ""),
+		QobuzEmail:            getEnv("QOBUZ_EMAIL", ""),
+		QobuzPasswordMD5:      qobuzPasswordMD5(),
+		QobuzAuthToken:        getEnv("QOBUZ_AUTH_TOKEN", ""),
 	}
+}
+
+// qobuzPasswordMD5 reads the Qobuz password, hashing a plaintext one so
+// QOBUZ_PASSWORD_MD5 and QOBUZ_PASSWORD are interchangeable. A pre-hashed
+// value wins, so a password never has to be stored in the clear.
+func qobuzPasswordMD5() string {
+	if hashed := getEnv("QOBUZ_PASSWORD_MD5", ""); hashed != "" {
+		return strings.ToLower(strings.TrimSpace(hashed))
+	}
+	plain := getEnv("QOBUZ_PASSWORD", "")
+	if plain == "" {
+		return ""
+	}
+	sum := md5.Sum([]byte(plain)) //nolint:gosec // required by the Qobuz API
+	return hex.EncodeToString(sum[:])
 }
 
 // Validate validates the configuration and returns detailed errors.

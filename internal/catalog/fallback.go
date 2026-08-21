@@ -33,7 +33,7 @@ func (f *FallbackProvider) getProviders() []Provider {
 	if f.manager != nil && f.manager.providers != nil {
 		storeProviders, _ := f.manager.providers.ListByType(string(f.providerType))
 		for _, p := range storeProviders {
-			providers = append(providers, NewProvider(f.providerType, p.URL))
+			providers = append(providers, NewProviderWithCredentials(f.providerType, p.URL, f.manager.QobuzCredentials()))
 		}
 	}
 

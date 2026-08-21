@@ -3,9 +3,11 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // FlexCover handles flexible cover image formats from the API
@@ -133,4 +135,76 @@ func (r *multiSegmentReader) Close() error {
 		return r.currBody.Close()
 	}
 	return nil
+}
+
+// apiStatusError is returned by provider HTTP helpers when the catalog API
+// answers with a non-200 status. Callers can inspect StatusCode to tell a
+// missing route (404) apart from an upstream failure. Body carries a snippet of
+// the response, which is usually where the API explains the refusal.
+type apiStatusError struct {
+	Status     string
+	Body       string
+	StatusCode int
+}
+
+func (e *apiStatusError) Error() string {
+	if e.Body != "" {
+		return fmt.Sprintf("API request failed: %s: %s", e.Status, e.Body)
+	}
+	return fmt.Sprintf("API request failed: %s", e.Status)
+}
+
+// maxErrorBody caps how much of a failed response is kept for the error message.
+const maxErrorBody = 200
+
+// readErrorBody returns a short, single-line snippet of a failed response body.
+func readErrorBody(r io.Reader) string {
+	body, err := io.ReadAll(io.LimitReader(r, maxErrorBody))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(strings.ReplaceAll(string(body), "\n", " "))
+}
+
+// statusCodeOf reports the HTTP status carried by err, or 0 when err did not
+// come from a catalog API response.
+func statusCodeOf(err error) int {
+	var statusErr *apiStatusError
+	if errors.As(err, &statusErr) {
+		return statusErr.StatusCode
+	}
+	return 0
+}
+
+// multiError reports every provider failure on a single line while still
+// matching errors.Is against each underlying cause. A fallback chain that kept
+// only the last error hid why the *primary* provider failed, which is usually
+// the one the user configured and cares about.
+type multiError struct {
+	errs []error
+}
+
+func (m *multiError) Error() string {
+	parts := make([]string, 0, len(m.errs))
+	for _, err := range m.errs {
+		parts = append(parts, err.Error())
+	}
+	return strings.Join(parts, "; ")
+}
+
+func (m *multiError) Unwrap() []error {
+	return m.errs
+}
+
+// joinErrors collapses provider failures into one error, or returns the single
+// error unchanged when there is only one.
+func joinErrors(errs []error) error {
+	switch len(errs) {
+	case 0:
+		return nil
+	case 1:
+		return errs[0]
+	default:
+		return &multiError{errs: errs}
+	}
 }

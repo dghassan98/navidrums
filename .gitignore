@@ -8,3 +8,6 @@ navidrome_data
 
 .worktrees
 worktrees
+*.db-shm
+*.db-wal
+test_concurrent.db*

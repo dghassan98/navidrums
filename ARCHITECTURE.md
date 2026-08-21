@@ -82,12 +82,13 @@ web/                  # Embedded UI templates and assets
 - Database migrations with WAL mode for concurrency
 
 ### Providers (internal/catalog)
-- External API adapters (HiFi/Tidal, Qobuz)
+- External API adapters (Monochrome, HiFi/Tidal, Qobuz)
 - Music catalog interface with multi-provider support
 - ProviderManager: three independent provider chains (metadata, download, streaming)
 - FallbackProvider: tries multiple URLs of same type in order
 - CrossProviderFallback: wraps streaming/download chains with cross-type fallback
-  - When primary provider fails, enriches ISRC from track metadata, retries primary with ISRC, then tries secondary provider
+  - When primary provider fails, enriches ISRC from track metadata, retries primary with ISRC, then tries every other configured provider type in turn
+- MonochromeProvider: embeds HifiProvider for metadata (identical response shapes) and overrides playback to use `/trackManifests/`, rejecting preview assets
 - CachedProvider: decorator wrapping each chain
 - Stream fetching with provider selection per operation
 
@@ -130,14 +131,14 @@ Two-table design: `jobs` (work queue) + `tracks` (full metadata).
 
 ### Sources
 
-**Provider (configurable)**: Track metadata sourced from whichever provider type is selected — HiFi (Tidal) or Qobuz. Configured per operation in Settings (metadata browsing, downloads, streaming each have independent selection).
+**Provider (configurable)**: Track metadata sourced from whichever provider type is selected — Monochrome, HiFi (Tidal) or Qobuz. Configured per operation in Settings (metadata browsing, downloads, streaming each have independent selection).
 **MusicBrainz (Secondary)**: Only fills empty fields — never overwrites existing data.
 
 *Note: MusicBrainz throttled to ~0.6 req/s to prevent IP blocking.*
 
 ### Precedence
 
-`Local Edits > Provider data (HiFi or Qobuz) > MusicBrainz data`
+`Local Edits > Provider data (Monochrome, HiFi or Qobuz) > MusicBrainz data`
 
 Both use "fill-in-the-blanks" — never overwrite populated fields. Skip API call if track already fully populated.
 
@@ -153,7 +154,7 @@ MusicBrainz triggers only when `ISRC` or `RecordingID` present.
 |-----|----------|----|----------|
 | `sync_file` | ✗ | ✗ | Re-tag with DB metadata only |
 | `sync_musicbrainz` | ✗ | ✓ fill gaps | MB API → fill → DB → re-tag |
-| `sync_hifi` | ✓ fill gaps (from active metadata provider) | ✓ fill gaps | Provider (HiFi/Qobuz) → fill → MB → fill → DB → re-tag |
+| `sync_hifi` | ✓ fill gaps (from active metadata provider) | ✓ fill gaps | Provider (Monochrome/HiFi/Qobuz) → fill → MB → fill → DB → re-tag |
 
 See @CONFIGURATION.md for genre map config.
 

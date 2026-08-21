@@ -1,6 +1,6 @@
 ## Hifi API (External Service)
 
-**Status**: The HiFi/Tidal API proxy is reliable for metadata browsing (search, artist, album, track info) but **unreliable for downloads and streaming** — it frequently returns 30-second previews instead of full-length tracks, especially at HI_RES_LOSSLESS quality. For reliable downloads and streaming, use a Qobuz provider instead (see [QOBUZ_API.md](QOBUZ_API.md)). Navidrums supports separate provider selection per operation — configure in Settings.
+**Status**: The HiFi/Tidal API proxy is reliable for metadata browsing (search, artist, album, track info) but its `/track/` playback route **frequently returns 30-second previews** instead of full-length tracks, especially at HI_RES_LOSSLESS quality. Prefer a Monochrome instance, which serves the same metadata routes plus a working playback route (see [MONOCHROME_API.md](MONOCHROME_API.md)); Qobuz remains an alternative (see [QOBUZ_API.md](QOBUZ_API.md)). Navidrums supports separate provider selection per operation — configure in Settings.
 
 ### Base URL
 Default: `http://127.0.0.1:8000` (Replace with a real hifi-api url. Some urls may return HI_RES_LOSSLESS 30 seconds track previews instead of full-length streams.)

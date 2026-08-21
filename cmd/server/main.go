@@ -58,6 +58,13 @@ func main() {
 
 	// Initialize Provider Manager (no system default — providers configured via UI)
 	providerManager := catalog.NewProviderManager(db, settingsRepo, cfg.CacheTTL, appLogger)
+	providerManager.SetQobuzCredentials(catalog.QobuzCredentials{
+		AppID:       cfg.QobuzAppID,
+		AppSecret:   cfg.QobuzAppSecret,
+		Email:       cfg.QobuzEmail,
+		PasswordMD5: cfg.QobuzPasswordMD5,
+		AuthToken:   cfg.QobuzAuthToken,
+	})
 
 	// Initialize Worker
 	w := downloader.NewWorker(db, settingsRepo, providerManager, cfg, appLogger)

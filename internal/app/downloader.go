@@ -34,7 +34,10 @@ func NewDownloader(pm *catalog.ProviderManager, cfg *config.Config) Downloader {
 func (d *downloader) Download(ctx context.Context, track *domain.Track, destPathNoExt string, quality string, logger *slog.Logger) (string, error) {
 	provider := d.providerManager.GetDownloadProvider()
 
-	shouldConvertToFLAC := quality == constants.QualityHiResLossless
+	// Lossless payloads can arrive as FLAC inside an MP4 container: that is the
+	// only manifest type Monochrome instances serve. Remuxing to .flac keeps the
+	// library consistent and is lossless; tagging an .m4a needs ffmpeg anyway.
+	shouldConvertToFLAC := quality == constants.QualityHiResLossless || quality == constants.QualityLossless
 
 	var lastErr error
 

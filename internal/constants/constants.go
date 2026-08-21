@@ -40,6 +40,20 @@ const (
 	TidalImageExt = ".jpg"
 )
 
+// Catalog provider defaults
+const (
+	// MonochromeDefaultURL is the API instance Monochrome falls back to when no
+	// custom instance is configured. Any compatible instance can replace it.
+	MonochromeDefaultURL = "https://lol.samidy.workers.dev"
+	// MonochromeDefaultName labels the seeded default instance in Settings.
+	MonochromeDefaultName = "Monochrome (default)"
+	// QobuzDirectDefaultURL is the official Qobuz API, used when the
+	// qobuz-direct provider has no explicit URL configured.
+	QobuzDirectDefaultURL = "https://www.qobuz.com/api.json/0.2"
+	// QobuzDirectDefaultName labels the seeded qobuz-direct entry in Settings.
+	QobuzDirectDefaultName = "Qobuz (my subscription)"
+)
+
 // MIME Types
 const (
 	MimeTypeBTS     = "application/vnd.tidal.bts"

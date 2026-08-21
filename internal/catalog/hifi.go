@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cesargomez89/navidrums/internal/constants"
 	"github.com/cesargomez89/navidrums/internal/domain"
 	"github.com/cesargomez89/navidrums/internal/httpclient"
 )
@@ -126,11 +127,23 @@ func (p *HifiProvider) resolveTrackID(ctx context.Context, trackID string, isrc 
 
 func (p *HifiProvider) GetStream(ctx context.Context, trackID string, isrc string, quality string) (io.ReadCloser, string, error) {
 	tid := p.resolveTrackID(ctx, trackID, isrc)
-	u := fmt.Sprintf("%s/track/?id=%s&quality=%s", p.BaseURL, tid, quality)
+	return p.streamFromTrackRoute(ctx, tid, quality, false)
+}
+
+// streamFromTrackRoute streams a track through the legacy /track/ route. The
+// track ID must already be resolved. With rejectPreview set, a preview asset is
+// reported as an error instead of being streamed, so a 30 second clip never
+// lands in the library as if it were the full track.
+func (p *HifiProvider) streamFromTrackRoute(ctx context.Context, trackID string, quality string, rejectPreview bool) (io.ReadCloser, string, error) {
+	u := fmt.Sprintf("%s/track/?id=%s&quality=%s", p.BaseURL, trackID, quality)
 
 	var resp APIStreamResponse
 	if err := p.get(ctx, u, &resp); err != nil {
 		return nil, "", err
+	}
+
+	if rejectPreview && isPreviewPresentation(resp.Data.AssetPresentation) {
+		return nil, "", fmt.Errorf("%w: track %s", ErrPreviewAsset, trackID)
 	}
 
 	if resp.Data.Manifest == "" {
@@ -142,7 +155,13 @@ func (p *HifiProvider) GetStream(ctx context.Context, trackID string, isrc strin
 		return nil, "", err
 	}
 
-	if resp.Data.ManifestMimeType == "application/vnd.tidal.bts" {
+	return p.streamFromManifest(ctx, resp.Data.ManifestMimeType, decoded)
+}
+
+// streamFromManifest turns a decoded TIDAL playback manifest into an audio stream.
+// It is shared by every provider speaking the TIDAL manifest formats (hifi, monochrome).
+func (p *HifiProvider) streamFromManifest(ctx context.Context, manifestMimeType string, decoded []byte) (io.ReadCloser, string, error) {
+	if manifestMimeType == constants.MimeTypeBTS {
 		var manifest struct {
 			MimeType string   `json:"mimeType"`
 			Urls     []string `json:"urls"`
@@ -154,29 +173,19 @@ func (p *HifiProvider) GetStream(ctx context.Context, trackID string, isrc strin
 			return nil, "", fmt.Errorf("no urls in manifest")
 		}
 
-		streamUrl := manifest.Urls[0]
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, streamUrl, nil)
+		sResp, err := p.openStreamURL(ctx, manifest.Urls[0])
 		if err != nil {
 			return nil, "", err
-		}
-		p.setRequestHeaders(req)
-		sResp, err := p.client.Do(ctx, req)
-		if err != nil {
-			return nil, "", err
-		}
-		if sResp.StatusCode != http.StatusOK {
-			_ = sResp.Body.Close()
-			return nil, "", fmt.Errorf("stream fetch failed: %s", sResp.Status)
 		}
 
-		mimeType := "audio/flac"
+		mimeType := constants.MimeTypeFLAC
 		if manifest.MimeType != "" {
 			mimeType = manifest.MimeType
 		}
 		return sResp.Body, mimeType, nil
 	}
 
-	if resp.Data.ManifestMimeType == "application/dash+xml" {
+	if manifestMimeType == constants.MimeTypeDashXML {
 		s := string(decoded)
 
 		if strings.Contains(s, "<SegmentTemplate") {
@@ -194,28 +203,40 @@ func (p *HifiProvider) GetStream(ctx context.Context, trackID string, isrc strin
 			return nil, "", fmt.Errorf("no BaseURL found in DASH manifest")
 		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, streamUrl, nil)
+		sResp, err := p.openStreamURL(ctx, streamUrl)
 		if err != nil {
 			return nil, "", err
 		}
-		p.setRequestHeaders(req)
-		sResp, err := p.client.Do(ctx, req)
-		if err != nil {
-			return nil, "", err
-		}
-		if sResp.StatusCode != http.StatusOK {
-			_ = sResp.Body.Close()
-			return nil, "", fmt.Errorf("stream fetch failed: %s", sResp.Status)
-		}
-		mimeType := "audio/flac"
+
+		mimeType := constants.MimeTypeFLAC
 		contentType := sResp.Header.Get("Content-Type")
 		if strings.Contains(contentType, "mp4") {
-			mimeType = "audio/mp4"
+			mimeType = constants.MimeTypeMP4
 		}
 		return sResp.Body, mimeType, nil
 	}
 
-	return nil, "", fmt.Errorf("unsupported manifest type: %s", resp.Data.ManifestMimeType)
+	return nil, "", fmt.Errorf("unsupported manifest type: %s", manifestMimeType)
+}
+
+// openStreamURL performs the GET against a CDN stream URL and returns the
+// still-open response. Callers own the body.
+func (p *HifiProvider) openStreamURL(ctx context.Context, streamURL string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, streamURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	p.setRequestHeaders(req)
+
+	resp, err := p.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("stream fetch failed: %s", resp.Status)
+	}
+	return resp, nil
 }
 
 func (p *HifiProvider) handleSegmentedDash(ctx context.Context, manifest string) (io.ReadCloser, string, error) {
@@ -323,7 +344,7 @@ func (p *HifiProvider) get(ctx context.Context, url string, target interface{}) 
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed: %s", resp.Status)
+		return &apiStatusError{StatusCode: resp.StatusCode, Status: resp.Status, Body: readErrorBody(resp.Body)}
 	}
 
 	decoder := json.NewDecoder(resp.Body)
@@ -333,9 +354,19 @@ func (p *HifiProvider) get(ctx context.Context, url string, target interface{}) 
 }
 
 func NewProvider(providerType ProviderType, baseURL string) Provider {
+	return NewProviderWithCredentials(providerType, baseURL, QobuzCredentials{})
+}
+
+// NewProviderWithCredentials builds a provider, handing the Qobuz
+// credentials to the types that authenticate as the user.
+func NewProviderWithCredentials(providerType ProviderType, baseURL string, qobuzCreds QobuzCredentials) Provider {
 	switch providerType {
 	case ProviderTypeQobuz:
 		return NewQobuzProvider(baseURL)
+	case ProviderTypeQobuzDirect:
+		return NewQobuzDirectProvider(baseURL, qobuzCreds)
+	case ProviderTypeMonochrome:
+		return NewMonochromeProvider(baseURL)
 	default:
 		return NewHifiProvider(baseURL)
 	}

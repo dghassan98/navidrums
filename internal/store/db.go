@@ -8,6 +8,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
+
+	"github.com/cesargomez89/navidrums/internal/constants"
 )
 
 type migration struct {
@@ -433,6 +435,67 @@ var migrations = []migration{
 			}
 			_, err = tx.Exec("UPDATE providers SET type = 'hifi' WHERE type IS NULL OR type = ''")
 			return err
+		},
+	},
+	{
+		version:     16,
+		description: "Seed default Monochrome provider instance",
+		up: func(tx *sqlx.Tx) error {
+			// Monochrome no longer proxies Qobuz: an instance serves catalog
+			// metadata and full-length downloads on its own, so seed the
+			// default one. Users can add, reorder or remove instances later.
+			var existing int
+			if err := tx.QueryRow(`SELECT COUNT(*) FROM providers`).Scan(&existing); err != nil {
+				return err
+			}
+
+			var seeded int
+			err := tx.QueryRow(`SELECT COUNT(*) FROM providers WHERE type = 'monochrome'`).Scan(&seeded)
+			if err != nil {
+				return err
+			}
+
+			if seeded == 0 {
+				_, err = tx.Exec(
+					`INSERT OR IGNORE INTO providers (type, url, name, position) VALUES ('monochrome', ?, ?, 0)`,
+					constants.MonochromeDefaultURL, constants.MonochromeDefaultName,
+				)
+				if err != nil {
+					return err
+				}
+			}
+
+			// The official Qobuz endpoint is fixed; it only works once the
+			// QOBUZ_* credentials are configured, so seed it but never
+			// select it automatically.
+			_, err = tx.Exec(
+				`INSERT OR IGNORE INTO providers (type, url, name, position) VALUES ('qobuz-direct', ?, ?, 0)`,
+				constants.QobuzDirectDefaultURL, constants.QobuzDirectDefaultName,
+			)
+			if err != nil {
+				return err
+			}
+
+			// Only a fresh install defaults to Monochrome. An install that
+			// already has providers keeps whatever it was using.
+			if existing > 0 {
+				return nil
+			}
+
+			for _, key := range []string{
+				SettingActiveMetadataProvider,
+				SettingActiveDownloadProvider,
+				SettingActiveStreamingProvider,
+			} {
+				_, err = tx.Exec(
+					`INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'monochrome')`, key,
+				)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
 		},
 	},
 }

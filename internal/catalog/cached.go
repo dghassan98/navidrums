@@ -18,21 +18,30 @@ type Cache interface {
 }
 
 type CachedProvider struct {
-	provider Provider
-	cache    Cache
-	cacheTTL time.Duration
+	provider     Provider
+	cache        Cache
+	providerType ProviderType
+	cacheTTL     time.Duration
 }
 
-func NewCachedProvider(provider Provider, cache Cache, cacheTTL time.Duration) *CachedProvider {
+func NewCachedProvider(provider Provider, cache Cache, cacheTTL time.Duration, providerType ProviderType) *CachedProvider {
 	return &CachedProvider{
-		provider: provider,
-		cache:    cache,
-		cacheTTL: cacheTTL,
+		provider:     provider,
+		cache:        cache,
+		cacheTTL:     cacheTTL,
+		providerType: providerType,
 	}
 }
 
+// key namespaces a cache entry by provider type. Every chain shares one cache
+// table, so without this a Monochrome response would be served to a Qobuz
+// request until the TTL expired.
+func (c *CachedProvider) key(format string, args ...any) string {
+	return string(c.providerType) + ":" + fmt.Sprintf(format, args...)
+}
+
 func (c *CachedProvider) Search(ctx context.Context, query string, searchType string) (*domain.SearchResult, error) {
-	cacheKey := fmt.Sprintf("search:%s:%s", searchType, query)
+	cacheKey := c.key("search:%s:%s", searchType, query)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {
@@ -58,7 +67,7 @@ func (c *CachedProvider) Search(ctx context.Context, query string, searchType st
 }
 
 func (c *CachedProvider) GetArtist(ctx context.Context, id string) (*domain.Artist, error) {
-	cacheKey := fmt.Sprintf("artist:%s", id)
+	cacheKey := c.key("artist:%s", id)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {
@@ -84,7 +93,7 @@ func (c *CachedProvider) GetArtist(ctx context.Context, id string) (*domain.Arti
 }
 
 func (c *CachedProvider) GetAlbum(ctx context.Context, id string) (*domain.Album, error) {
-	cacheKey := fmt.Sprintf("album:%s", id)
+	cacheKey := c.key("album:%s", id)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {
@@ -110,7 +119,7 @@ func (c *CachedProvider) GetAlbum(ctx context.Context, id string) (*domain.Album
 }
 
 func (c *CachedProvider) GetPlaylist(ctx context.Context, id string) (*domain.Playlist, error) {
-	cacheKey := fmt.Sprintf("playlist:%s", id)
+	cacheKey := c.key("playlist:%s", id)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {
@@ -136,7 +145,7 @@ func (c *CachedProvider) GetPlaylist(ctx context.Context, id string) (*domain.Pl
 }
 
 func (c *CachedProvider) GetTrack(ctx context.Context, id string) (*domain.CatalogTrack, error) {
-	cacheKey := fmt.Sprintf("track:%s", id)
+	cacheKey := c.key("track:%s", id)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {
@@ -166,7 +175,7 @@ func (c *CachedProvider) GetStream(ctx context.Context, trackID string, isrc str
 }
 
 func (c *CachedProvider) GetSimilarAlbums(ctx context.Context, id string) ([]domain.Album, error) {
-	cacheKey := fmt.Sprintf("similar-albums:%s", id)
+	cacheKey := c.key("similar-albums:%s", id)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {
@@ -194,7 +203,7 @@ func (c *CachedProvider) GetSimilarAlbums(ctx context.Context, id string) ([]dom
 }
 
 func (c *CachedProvider) GetSimilarArtists(ctx context.Context, id string) ([]domain.Artist, error) {
-	cacheKey := fmt.Sprintf("similar-artists:%s", id)
+	cacheKey := c.key("similar-artists:%s", id)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {
@@ -222,7 +231,7 @@ func (c *CachedProvider) GetSimilarArtists(ctx context.Context, id string) ([]do
 }
 
 func (c *CachedProvider) GetRecommendations(ctx context.Context, id string) ([]domain.CatalogTrack, error) {
-	cacheKey := fmt.Sprintf("track-recommendations:%s", id)
+	cacheKey := c.key("track-recommendations:%s", id)
 
 	data, err := c.cache.GetCache(cacheKey)
 	if err != nil {

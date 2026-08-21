@@ -264,8 +264,9 @@ type APISimilarArtistsResponse struct {
 
 type APIStreamResponse struct {
 	Data struct {
-		Manifest         string `json:"manifest"`
-		ManifestMimeType string `json:"manifestMimeType"`
+		Manifest          string `json:"manifest"`
+		ManifestMimeType  string `json:"manifestMimeType"`
+		AssetPresentation string `json:"assetPresentation"`
 	} `json:"data"`
 }
 

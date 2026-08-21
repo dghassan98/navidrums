@@ -15,11 +15,12 @@ type Logger interface {
 }
 
 type ProviderManager struct {
-	logger    Logger
-	providers *store.ProvidersRepo
-	settings  *store.SettingsRepo
-	cacheTTL  time.Duration
-	db        *store.DB
+	logger     Logger
+	providers  *store.ProvidersRepo
+	settings   *store.SettingsRepo
+	cacheTTL   time.Duration
+	db         *store.DB
+	qobuzCreds QobuzCredentials
 
 	chains map[ProviderType]*CachedProvider
 	mu     sync.RWMutex
@@ -40,19 +41,34 @@ func NewProviderManager(db *store.DB, settings *store.SettingsRepo, cacheTTL tim
 	}
 }
 
+// SetQobuzCredentials supplies the credentials the qobuz-direct provider
+// authenticates with, dropping any chains already built without them.
+func (m *ProviderManager) SetQobuzCredentials(creds QobuzCredentials) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.qobuzCreds = creds
+	m.chains = nil
+}
+
+// QobuzCredentials returns the configured Qobuz credentials.
+func (m *ProviderManager) QobuzCredentials() QobuzCredentials {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.qobuzCreds
+}
+
 func (m *ProviderManager) readSetting(key string) ProviderType {
 	if m.settings == nil {
-		return ProviderTypeHifi
+		return DefaultProviderType
 	}
 	val, err := m.settings.Get(key)
 	if err != nil || val == "" {
-		return ProviderTypeHifi
+		return DefaultProviderType
 	}
-	pt := ProviderType(val)
-	if pt != ProviderTypeHifi && pt != ProviderTypeQobuz {
-		return ProviderTypeHifi
+	if !IsValidProviderType(val) {
+		return DefaultProviderType
 	}
-	return pt
+	return ProviderType(val)
 }
 
 func (m *ProviderManager) buildChain(pt ProviderType) *CachedProvider {
@@ -61,7 +77,7 @@ func (m *ProviderManager) buildChain(pt ProviderType) *CachedProvider {
 	if m.db != nil {
 		cacheStore = &storeCache{store: m.db}
 	}
-	return NewCachedProvider(fb, cacheStore, m.cacheTTL)
+	return NewCachedProvider(fb, cacheStore, m.cacheTTL, pt)
 }
 
 func (m *ProviderManager) GetProvider(pt ProviderType) Provider {
@@ -96,13 +112,18 @@ func (m *ProviderManager) GetDownloadProvider() Provider {
 func (m *ProviderManager) getCrossProvider(primary ProviderType) Provider {
 	chain := m.GetProvider(primary)
 
-	fallbackType := oppositeProviderType(primary)
-	if m.hasProvidersOfType(fallbackType) {
-		fallbackChain := m.GetProvider(fallbackType)
-		return &crossProviderFallback{primary: chain, fallback: fallbackChain}
+	var fallbacks []Provider
+	for _, pt := range fallbackProviderTypes(primary) {
+		if m.hasProvidersOfType(pt) {
+			fallbacks = append(fallbacks, m.GetProvider(pt))
+		}
 	}
 
-	return chain
+	if len(fallbacks) == 0 {
+		return chain
+	}
+
+	return &crossProviderFallback{primary: chain, fallbacks: fallbacks}
 }
 
 func (m *ProviderManager) GetStreamingProvider() Provider {

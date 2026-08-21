@@ -72,20 +72,24 @@ Basic HTTP authentication is optional:
 
 ## Provider Management
 
-Navidrums supports two provider types: **HiFi** (Tidal API proxy) and **Qobuz** (Qobuz API proxy). Each type can have multiple endpoint URLs configured as fallbacks.
+Navidrums supports four provider types: **Monochrome** (see [MONOCHROME_API.md](MONOCHROME_API.md)), **Qobuz Direct** (the official Qobuz API with your own subscription, see [QOBUZ_API.md](QOBUZ_API.md)), **HiFi** (Tidal API proxy) and **Qobuz** (a shared Qobuz proxy). Each type can have multiple endpoint URLs configured as fallbacks.
+
+**Qobuz Direct credentials** live in the environment, never the database: `QOBUZ_APP_ID`, `QOBUZ_APP_SECRET`, `QOBUZ_EMAIL` and `QOBUZ_PASSWORD` (or `QOBUZ_PASSWORD_MD5`). Without them the provider fails with a clear error instead of falling back silently. A free Qobuz account is rejected at login — file URLs need a paid subscription.
+
+Fresh installs are seeded with the instance Monochrome itself defaults to, `https://lol.samidy.workers.dev`, and use it for all three operations. Existing installs keep whatever they were using; switch in Settings.
 
 **Per-operation selection**: Three independent settings control which provider type is used for each operation:
-- **Metadata (search/browse)**: defaults to HiFi
-- **Download**: defaults to HiFi (switch to Qobuz for reliable full-track downloads)
-- **Streaming**: defaults to HiFi (switch to Qobuz for full-length playback previews)
+- **Metadata (search/browse)**: Monochrome on fresh installs
+- **Download**: Monochrome on fresh installs
+- **Streaming**: Monochrome on fresh installs
 
-**Why separate providers**: The HiFi/Tidal API is reliable for metadata browsing but frequently returns 30-second previews instead of full tracks for downloads and streaming. Qobuz provides reliable full-track downloads and streaming.
+**Why separate providers**: the legacy HiFi/Tidal `/track/` route frequently returns 30-second previews instead of full tracks. Monochrome serves playback from `/trackManifests/` instead, so a single instance covers browsing, downloads and streaming; Qobuz stays available if you prefer it for downloads. A preview response is treated as a failure so a 30-second clip never lands in your library.
 
 Managing providers:
 - **Primary provider**: Sets the default HiFi URL via `PROVIDER_URL` environment variable
 - **Settings UI**: Add, reorder (drag), edit, delete provider URLs per type; select which provider type per operation
 - **Fallback within type**: Multiple URLs of the same type are tried in position order until one succeeds
-- **Cross-provider fallback**: For streaming and downloads, if the primary provider type fails all its URLs, the other provider type is tried automatically. When ISRC is missing from the stream request, it is enriched from track metadata before retrying the primary or falling back to the secondary provider.
+- **Cross-provider fallback**: For streaming and downloads, if the primary provider type fails all its URLs, every other configured provider type is tried in turn. When ISRC is missing from the stream request, it is enriched from track metadata before retrying the primary or falling back to the secondary provider.
 
 ## Validation
 

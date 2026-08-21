@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/cesargomez89/navidrums/internal/app"
+	"github.com/cesargomez89/navidrums/internal/catalog"
 	"github.com/cesargomez89/navidrums/internal/constants"
 	"github.com/cesargomez89/navidrums/internal/domain"
 	"github.com/cesargomez89/navidrums/internal/http/dto"
@@ -309,23 +310,16 @@ func (h *Handler) RetryJobHTMX(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetProvidersHTMX(w http.ResponseWriter, r *http.Request) {
-	hifiProviders, err := h.ProvidersRepo.ListByType("hifi")
-	if err != nil {
-		h.Logger.Error("Failed to list hifi providers", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+	response := make(map[string]interface{}, len(catalog.ProviderTypes))
 
-	qobuzProviders, err := h.ProvidersRepo.ListByType("qobuz")
-	if err != nil {
-		h.Logger.Error("Failed to list qobuz providers", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"hifi":  hifiProviders,
-		"qobuz": qobuzProviders,
+	for _, providerType := range catalog.ProviderTypes {
+		providers, err := h.ProvidersRepo.ListByType(string(providerType))
+		if err != nil {
+			h.Logger.Error("Failed to list providers", "type", providerType, "error", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		response[string(providerType)] = providers
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -377,6 +371,10 @@ func (h *Handler) AddProviderHTMX(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "name, url, and type are required", http.StatusBadRequest)
 		return
 	}
+	if !catalog.IsValidProviderType(providerType) {
+		http.Error(w, "Unknown provider type", http.StatusBadRequest)
+		return
+	}
 
 	id, err := h.ProvidersRepo.Create(providerType, url, name)
 	if err != nil || id == 0 {
@@ -415,18 +413,17 @@ func (h *Handler) RemoveProviderHTMX(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetDefaultAPIsHTMX(w http.ResponseWriter, r *http.Request) {
-	keys := []string{"active_metadata_provider", "active_download_provider", "active_streaming_provider"}
-	defaults := map[string]string{
-		"active_metadata_provider":  "hifi",
-		"active_download_provider":  "hifi",
-		"active_streaming_provider": "hifi",
+	keys := []string{
+		store.SettingActiveMetadataProvider,
+		store.SettingActiveDownloadProvider,
+		store.SettingActiveStreamingProvider,
 	}
 
-	response := make(map[string]string)
+	response := make(map[string]string, len(keys))
 	for _, key := range keys {
 		val, err := h.SettingsRepo.Get(key)
-		if err != nil || val == "" {
-			val = defaults[key]
+		if err != nil || !catalog.IsValidProviderType(val) {
+			val = string(catalog.DefaultProviderType)
 		}
 		response[key] = val
 	}
@@ -449,17 +446,21 @@ func (h *Handler) SetDefaultAPIHTMX(w http.ResponseWriter, r *http.Request) {
 	}
 
 	validKeys := map[string]bool{
-		"active_metadata_provider":  true,
-		"active_download_provider":  true,
-		"active_streaming_provider": true,
+		store.SettingActiveMetadataProvider:  true,
+		store.SettingActiveDownloadProvider:  true,
+		store.SettingActiveStreamingProvider: true,
 	}
 	if !validKeys[body.Key] {
 		http.Error(w, "Invalid key", http.StatusBadRequest)
 		return
 	}
 
-	if body.Value != "hifi" && body.Value != "qobuz" {
-		http.Error(w, "Value must be 'hifi' or 'qobuz'", http.StatusBadRequest)
+	if !catalog.IsValidProviderType(body.Value) {
+		names := make([]string, 0, len(catalog.ProviderTypes))
+		for _, pt := range catalog.ProviderTypes {
+			names = append(names, string(pt))
+		}
+		http.Error(w, "Value must be one of: "+strings.Join(names, ", "), http.StatusBadRequest)
 		return
 	}
 
