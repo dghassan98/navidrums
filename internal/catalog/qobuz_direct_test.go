@@ -385,17 +385,22 @@ func TestQobuzDirectReLoginsOnUnauthorized(t *testing.T) {
 	}
 }
 
-func TestNewProviderWithCredentialsReturnsQobuzDirect(t *testing.T) {
-	provider := NewProviderWithCredentials(ProviderTypeQobuzDirect, "", testQobuzCredentials())
-	direct, ok := provider.(*QobuzDirectProvider)
-	if !ok {
-		t.Fatalf("NewProviderWithCredentials(qobuz-direct) = %T, want *QobuzDirectProvider", provider)
-	}
+func TestNewQobuzDirectProviderDefaultsBaseURL(t *testing.T) {
+	direct := NewQobuzDirectProvider("", testQobuzCredentials())
+
 	if direct.creds.AppID != testQobuzAppID {
 		t.Errorf("credentials were not passed through: app id = %q", direct.creds.AppID)
 	}
 	if direct.BaseURL != constants.QobuzDirectDefaultURL {
 		t.Errorf("BaseURL = %q, want %q", direct.BaseURL, constants.QobuzDirectDefaultURL)
+	}
+}
+
+func TestNewQobuzDirectProviderTrimsBaseURL(t *testing.T) {
+	direct := NewQobuzDirectProvider("  https://qobuz.example.test/api/  ", testQobuzCredentials())
+
+	if direct.BaseURL != "https://qobuz.example.test/api" {
+		t.Errorf("BaseURL = %q, want the trimmed custom endpoint", direct.BaseURL)
 	}
 }
 
@@ -494,4 +499,19 @@ func TestQobuzDirectMetadataWorksWithoutSecret(t *testing.T) {
 	if !errors.Is(err, ErrQobuzSecretMissing) {
 		t.Errorf("error = %v, want ErrQobuzSecretMissing", err)
 	}
+}
+
+// testAudioBody and readStream were shared test helpers that lived alongside
+// the providers removed in the qobuz-only refactor.
+const testAudioBody = "FLACAUDIOBYTES"
+
+func readStream(t *testing.T, body io.ReadCloser) string {
+	t.Helper()
+	defer func() { _ = body.Close() }()
+
+	data, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("failed to read stream: %v", err)
+	}
+	return string(data)
 }

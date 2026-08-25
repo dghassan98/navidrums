@@ -25,7 +25,7 @@ type Handler struct {
 	DownloadsService *app.DownloadsService
 	ProviderManager  *catalog.ProviderManager
 	SettingsRepo     *store.SettingsRepo
-	ProvidersRepo    *store.ProvidersRepo
+	DB               *store.DB
 	Config           *config.Config
 	Templates        *template.Template
 	Logger           *logger.Logger
@@ -34,13 +34,13 @@ type Handler struct {
 	recsMutex        sync.RWMutex
 }
 
-func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, pr *store.ProvidersRepo, cfg *config.Config) *Handler {
+func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, cfg *config.Config) *Handler {
 	h := &Handler{
 		JobService:       js,
 		DownloadsService: ds,
 		ProviderManager:  pm,
 		SettingsRepo:     sr,
-		ProvidersRepo:    pr,
+		DB:               db,
 		Config:           cfg,
 		Logger:           logger.Default(),
 		FormDecoder:      form.NewDecoder(),
@@ -63,6 +63,11 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/htmx/artist/{id}/similar", h.SimilarArtistsHTMX)
 	r.Get("/playlist/{id}", h.PlaylistPage)
 
+	r.Get("/htmx/discover/row/{kind}", h.DiscoverRowHTMX)
+	r.Get("/htmx/genre-picker", h.GenrePickerHTMX)
+	r.Get("/genre/{id}", h.GenrePage)
+	r.Get("/label/{id}", h.LabelPage)
+
 	r.Post("/htmx/download/{type}/{id}", h.DownloadHTMX)
 	r.Get("/queue", h.QueuePage)
 	r.Get("/htmx/queue/active", h.QueueActiveHTMX)
@@ -76,7 +81,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/htmx/downloads/sync", h.SyncAllHTMX)
 	r.Post("/htmx/downloads/bulk-delete", h.BulkDeleteHTMX)
 	r.Post("/htmx/downloads/bulk-sync", h.BulkSyncHTMX)
-	r.Post("/htmx/downloads/enrich-hifi", h.BulkEnrichHiFiHTMX)
+	r.Post("/htmx/downloads/enrich-provider", h.BulkEnrichProviderHTMX)
 	r.Post("/htmx/downloads/enrich-musicbrainz", h.BulkEnrichMusicBrainzHTMX)
 	r.Post("/htmx/downloads/bulk-genre", h.BulkUpdateGenreHTMX)
 	r.Delete("/htmx/download/{id}", h.DeleteDownloadHTMX)
@@ -88,7 +93,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/htmx/track/{id}/save", h.SaveTrackHTMX)
 	r.Post("/htmx/track/{id}/sync", h.SyncTrackHTMX)
 	r.Post("/htmx/track/{id}/enrich", h.EnrichTrackHTMX)
-	r.Post("/htmx/track/{id}/enrich-hifi", h.EnrichHiFiHTMX)
+	r.Post("/htmx/track/{id}/enrich-provider", h.EnrichProviderHTMX)
 
 	// Settings and everything that mutates them sit behind the admin gate,
 	// which is a no-op when NAVIDRUMS_ADMIN_PASSWORD is unset.
@@ -108,13 +113,11 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/htmx/notifications", h.SetNotificationsHTMX)
 		r.Post("/htmx/notifications/test", h.TestNotificationHTMX)
 
-		r.Get("/htmx/providers", h.GetProvidersHTMX)
-		r.Post("/htmx/providers/reorder", h.ReorderProvidersHTMX)
-		r.Post("/htmx/provider", h.AddProviderHTMX)
-		r.Delete("/htmx/provider", h.RemoveProviderHTMX)
 
-		r.Get("/htmx/default-apis", h.GetDefaultAPIsHTMX)
-		r.Post("/htmx/default-apis", h.SetDefaultAPIHTMX)
+
+		r.Get("/htmx/discover-rows", h.GetDiscoverRowsHTMX)
+		r.Post("/htmx/discover-rows", h.SetDiscoverRowsHTMX)
+		r.Post("/htmx/discover-rows/reset", h.ResetDiscoverRowsHTMX)
 
 		r.Get("/htmx/genre-map", h.GetGenreMapHTMX)
 		r.Post("/htmx/genre-map", h.SetGenreMapHTMX)
@@ -167,8 +170,11 @@ func (h *Handler) RenderPage(w http.ResponseWriter, pageTmpl string, data interf
 	// Inject global theme if not already set in data
 	if m, ok := data.(map[string]interface{}); ok {
 		if _, exists := m["Theme"]; !exists {
-			theme, err := h.SettingsRepo.Get(store.SettingTheme)
-			if err != nil || theme == "" {
+			theme := ""
+			if h.SettingsRepo != nil {
+				theme, _ = h.SettingsRepo.Get(store.SettingTheme)
+			}
+			if theme == "" {
 				theme = h.Config.Theme
 			}
 			m["Theme"] = theme

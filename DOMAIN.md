@@ -20,20 +20,19 @@ Collections of tracks. Album: ID, title, artist, year, genre, label, tracks, UPC
 
 ## Job
 
-Background download task. Types: `track`, `album`, `playlist`, `artist`, `discography`, `sync_file`, `sync_musicbrainz`, `sync_hifi`.
+Background download task. Types: `track`, `album`, `playlist`, `artist`, `discography`, `sync_file`, `sync_musicbrainz`, `sync_provider`.
 
 Minimal fields: ID, Type, Status, SourceID, Progress, Error, timestamps, ParentJobID. `SourceID` → Track.ProviderID. Container jobs decompose into track jobs.
 
 ## Provider
 
-External catalog adapter interface with two implementations: **HiFi** (Tidal API proxy) and **Qobuz** (Qobuz API proxy). Methods: `Search`, `GetArtist`, `GetAlbum`, `GetPlaylist`, `GetTrack`, `GetStream`, `GetSimilarAlbums`, `GetLyrics`. Returns CatalogTrack.
+External catalog adapter interface with one implementation: **Qobuz**, called directly with your own subscription. Methods: `Search`, `GetArtist`, `GetAlbum`, `GetPlaylist`, `GetTrack`, `GetStream`, `GetSimilarAlbums`, `GetSimilarArtists`, `GetLyrics`, `GetRecommendations`, plus the browse calls `GetFeatured`, `GetFeaturedPlaylists`, `GetGenres`, `GetLabel`. Returns CatalogTrack.
 
-**ProviderManager** orchestrates three independent provider chains:
-- Metadata provider (search/browse)
-- Download provider (track downloads via `GetStream`)
-- Streaming provider (playback previews via `GetStream`)
+**ProviderManager** owns the single provider, wrapped as `QobuzDirectProvider → CachedProvider`. It is rebuilt whenever credentials change so Settings edits apply without a restart. The endpoint can be overridden with the `qobuz_base_url` setting; it defaults to the official API.
 
-Each chain is `FallbackProvider → CachedProvider` — tries multiple URLs of the same type, caches responses. Provider type per operation is stored in settings (`active_metadata_provider`, `active_download_provider`, `active_streaming_provider`).
+Browse responses carry their own cache TTLs: 24h for the genre tree, 1h for editorial rows and label pages.
+
+**Genre** and **Label** are browse-only domain types. `Album.LabelID` and `Album.GenreID` are what make those fields clickable; `Album.Owned` is transient view state set from the tracks table and never serialised.
 
 Qobuz limitations: `GetPlaylist`, `GetSimilarAlbums`, `GetSimilarArtists`, `GetLyrics`, `GetRecommendations` return `ErrQobuzNotSupported`.
 

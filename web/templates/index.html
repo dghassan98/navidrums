@@ -20,9 +20,40 @@
         </button>
     </form>
 </div>
-<div id="results" hx-get="/htmx/lucky" hx-trigger="load" hx-swap="innerHTML">
-    <div class="flex justify-center items-center py-12 text-muted">
-        Loading your recommendations...
-    </div>
+<div id="results"></div>
+
+<div class="toolbar-row mb-6">
+    <label class="text-sm text-muted">Genre</label>
+    <span hx-get="/htmx/genre-picker" hx-trigger="load" hx-swap="innerHTML"></span>
+    <button class="btn btn-sm btn-outline" onclick="reloadDiscoverRows()">Apply</button>
 </div>
+
+<div id="discover-rows">
+    {{range .Rows}}
+    <div class="discover-row" data-kind="{{.Kind}}"
+        hx-get="/htmx/discover/row/{{.Kind}}" hx-trigger="load"
+        hx-include="[name='genre_id']" hx-swap="innerHTML">
+        <p class="text-sm text-muted">Loading&hellip;</p>
+    </div>
+    {{end}}
+</div>
+
+<section class="mb-6">
+    <h3 class="mb-4">Because you downloaded&hellip;</h3>
+    <div id="lucky" hx-get="/htmx/lucky" hx-trigger="load" hx-swap="innerHTML">
+        <div class="flex justify-center items-center py-12 text-muted">
+            Loading your recommendations...
+        </div>
+    </div>
+</section>
+
+<script>
+    // Each row fetches itself, so applying a genre just re-triggers them all
+    // rather than reloading the page.
+    function reloadDiscoverRows() {
+        document.querySelectorAll('#discover-rows .discover-row').forEach(function (el) {
+            htmx.trigger(el, 'load');
+        });
+    }
+</script>
 {{end}}

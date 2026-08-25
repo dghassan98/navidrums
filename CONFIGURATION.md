@@ -10,7 +10,6 @@ Navidrums is configured via environment variables with sensible defaults. All co
 | `DB_PATH` | `navidrums.db` | No | SQLite database file path (Docker: `/data/navidrums.db`) |
 | `DOWNLOADS_DIR` | `~/Downloads/navidrums` | No | Output directory for downloaded music (Docker: `/music`) |
 | `SUBDIR_TEMPLATE` | `{{.AlbumArtist}}/{{.OriginalYear}} - {{.Album}}/{{.Disc}}-{{.Track}} {{.Title}}` | No | Go template for file organization |
-| `PROVIDER_URL` | `http://127.0.0.1:8000` | No | Default HiFi (Tidal) API URL for metadata browsing (additional providers managed via Settings UI) |
 | `QUALITY` | `LOSSLESS` | No | Audio quality preference (`LOSSLESS`, `HI_RES_LOSSLESS`, `HIGH`, `LOW`) |
 | `LOG_LEVEL` | `info` | No | Logging level (`debug`, `info`, `warn`, `error`) |
 | `LOG_FORMAT` | `text` | No | Log output format (`text`, `json`) |
@@ -27,7 +26,7 @@ Navidrums is configured via environment variables with sensible defaults. All co
 | `FFMPEG_PATH` | (system) | No | Path to ffmpeg binary (required for MP4/M4A tagging - hi-res downloads often come as MP4) |
 | `FFPROBE_PATH` | (system) | No | Path to ffprobe binary |
 
-**Rate limiting**: Each provider enforces a 200ms minimum interval between requests. The global rate limit (`RATE_LIMIT_*`) applies across all providers.
+**Rate limiting**: The Qobuz client enforces a 500ms minimum interval between requests. The global rate limit (`RATE_LIMIT_*`) applies to inbound HTTP.
 
 **Note:** ffmpeg is only required when tagging MP4/M4A files (common for hi-res audio). FLAC and MP3 files are tagged using native Go libraries.
 
@@ -141,30 +140,47 @@ environment on a shared machine. A plaintext password is hashed to MD5 before st
 `app_id` and `app_secret` are read from the Qobuz web player bundle and Qobuz rotates them, and auth tokens
 expire, so expect to refresh these occasionally. See [QOBUZ_API.md](QOBUZ_API.md) for where to find them.
 
-## Provider Management
+## Catalog Provider
 
-Navidrums supports four provider types: **Monochrome** (see [MONOCHROME_API.md](MONOCHROME_API.md)), **Qobuz Direct** (the official Qobuz API with your own subscription, see [QOBUZ_API.md](QOBUZ_API.md)), **HiFi** (Tidal API proxy) and **Qobuz** (a shared Qobuz proxy). Each type can have multiple endpoint URLs configured as fallbacks.
+Qobuz is the only catalog provider. Browsing, downloads and streaming all go through the
+official Qobuz API using your own subscription — see [QOBUZ_API.md](QOBUZ_API.md).
 
-**Qobuz Direct credentials** live in the environment, never the database: `QOBUZ_APP_ID`, `QOBUZ_APP_SECRET`, `QOBUZ_EMAIL` and `QOBUZ_PASSWORD` (or `QOBUZ_PASSWORD_MD5`). Without them the provider fails with a clear error instead of falling back silently. A free Qobuz account is rejected at login — file URLs need a paid subscription.
+**Credentials** come from the environment or Settings: `QOBUZ_APP_ID`, `QOBUZ_APP_SECRET`, and
+either `QOBUZ_AUTH_TOKEN` or `QOBUZ_EMAIL` plus `QOBUZ_PASSWORD` (or `QOBUZ_PASSWORD_MD5`).
+Values saved in Settings win over the environment, so credentials can be rotated without a
+restart. Without them, browsing and downloads fail with a clear error rather than silently
+returning nothing. A free Qobuz account is rejected at login — file URLs need a paid
+subscription.
 
-Fresh installs are seeded with the instance Monochrome itself defaults to, `https://lol.samidy.workers.dev`, and use it for all three operations. Existing installs keep whatever they were using; switch in Settings.
+`app_id` and `app_secret` identify the Qobuz *web player*, not you, and Qobuz rotates them.
+When downloads start failing with a 400, refresh them. Settings → Qobuz status probes
+`app_id`, the account and `app_secret` independently, because they fail for different reasons.
 
-**Per-operation selection**: Three independent settings control which provider type is used for each operation:
-- **Metadata (search/browse)**: Monochrome on fresh installs
-- **Download**: Monochrome on fresh installs
-- **Streaming**: Monochrome on fresh installs
+**Endpoint**: defaults to `https://www.qobuz.com/api.json/0.2`. The `qobuz_base_url` setting
+overrides it; this is almost never needed.
 
-**Why separate providers**: the legacy HiFi/Tidal `/track/` route frequently returns 30-second previews instead of full tracks. Monochrome serves playback from `/trackManifests/` instead, so a single instance covers browsing, downloads and streaming; Qobuz stays available if you prefer it for downloads. A preview response is treated as a failure so a 30-second clip never lands in your library.
+**Caching**: catalog responses are cached for `CACHE_TTL` (default 12h). Browse data uses its
+own TTLs — 24 hours for the genre tree, which is effectively static, and 1 hour for editorial
+rows and label pages.
 
-Managing providers:
-- **Primary provider**: Sets the default HiFi URL via `PROVIDER_URL` environment variable
-- **Settings UI**: Add, reorder (drag), edit, delete provider URLs per type; select which provider type per operation
-- **Fallback within type**: Multiple URLs of the same type are tried in position order until one succeeds
-- **Cross-provider fallback**: For streaming and downloads, if the primary provider type fails all its URLs, every other configured provider type is tried in turn. When ISRC is missing from the stream request, it is enriched from track metadata before retrying the primary or falling back to the secondary provider.
+## Discover Rows
+
+The home page shows editorial rows from Qobuz, configured in Settings → Discover Rows. Rows
+can be enabled, disabled and reordered; the stored value is a JSON array of
+`{"kind": ..., "enabled": ...}`.
+
+Valid kinds are the types `album/getFeatured` accepts — `new-releases`, `recent-releases`,
+`new-releases-full`, `editor-picks`, `press-awards`, `most-streamed`, `most-featured`,
+`best-sellers`, `ideal-discography`, `qobuzissims`, `harmonia-mundi`, `universal-classic`,
+`universal-jazz`, `universal-jeunesse`, `universal-chanson` — plus `playlists`, which maps to
+`playlist/getFeatured`. Unrecognised kinds in a stored config are ignored rather than
+requested, since Qobuz answers an unknown type with a 400.
+
+Each row loads independently over htmx, so a slow or failing row cannot block the page.
 
 ## Validation
 
-Startup validation — common errors: invalid PORT, PROVIDER_URL, QUALITY, SUBDIR_TEMPLATE, CACHE_TTL, or missing username with password set.
+Startup validation — common errors: invalid PORT, QUALITY, SUBDIR_TEMPLATE, CACHE_TTL, or missing username with password set.
 
 ## Docker
 

@@ -317,15 +317,15 @@ func TestDownloadsService_EnqueueSyncHiFiJob(t *testing.T) {
 		t.Fatalf("EnqueueSyncHiFiJob failed: %v", err)
 	}
 
-	job, err := db.GetActiveJobBySourceID("hifi_test", domain.JobTypeSyncHiFi)
+	job, err := db.GetActiveJobBySourceID("hifi_test", domain.JobTypeSyncProvider)
 	if err != nil {
 		t.Fatalf("GetActiveJobBySourceID failed: %v", err)
 	}
 	if job == nil {
 		t.Fatal("Expected job to be created")
 	}
-	if job.Type != domain.JobTypeSyncHiFi {
-		t.Errorf("Expected job type %s, got %s", domain.JobTypeSyncHiFi, job.Type)
+	if job.Type != domain.JobTypeSyncProvider {
+		t.Errorf("Expected job type %s, got %s", domain.JobTypeSyncProvider, job.Type)
 	}
 }
 
@@ -352,7 +352,7 @@ func TestDownloadsService_EnqueueSyncJobs(t *testing.T) {
 	// Create an active job for t1 already
 	existingJob := &domain.Job{
 		ID:       "existing",
-		Type:     domain.JobTypeSyncHiFi,
+		Type:     domain.JobTypeSyncProvider,
 		Status:   domain.JobStatusRunning,
 		SourceID: sql.NullString{String: "t1", Valid: true},
 	}
@@ -372,7 +372,7 @@ func TestDownloadsService_EnqueueSyncJobs(t *testing.T) {
 	}
 
 	// Verify t2 job exists
-	job, _ := db.GetActiveJobBySourceID("t2", domain.JobTypeSyncHiFi)
+	job, _ := db.GetActiveJobBySourceID("t2", domain.JobTypeSyncProvider)
 	if job == nil {
 		t.Fatal("Expected sync job for t2")
 	}

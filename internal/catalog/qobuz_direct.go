@@ -39,7 +39,15 @@ var (
 
 	// ErrQobuzNotStreamable reports that Qobuz refused this particular track.
 	ErrQobuzNotStreamable = errors.New("qobuz refused to stream this track")
+
+	// ErrQobuzNotSupported reports an operation the Qobuz API has no
+	// equivalent for.
+	ErrQobuzNotSupported = errors.New("qobuz does not support this operation")
 )
+
+// defaultProviderUserAgent identifies requests as a browser. Qobuz answers the
+// Go default user agent inconsistently.
+const defaultProviderUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 // qobuzPlaylistTrackLimit caps how many playlist tracks are fetched in one call.
 const qobuzPlaylistTrackLimit = 500

@@ -1,0 +1,22 @@
+{{define "discover_row"}}
+<section class="mb-6">
+    <h3 class="mb-4">{{.Title}}</h3>
+    {{if .Message}}
+    <p class="text-sm text-muted">{{.Message}}</p>
+    {{else if .Playlists}}
+    <div class="list-grid">
+        {{range .Playlists}}
+        {{template "playlist_card.html" .}}
+        {{end}}
+    </div>
+    {{else if .Albums}}
+    <div class="list-grid">
+        {{range .Albums}}
+        {{template "album_card.html" .}}
+        {{end}}
+    </div>
+    {{else}}
+    <p class="text-sm text-muted">Nothing here right now.</p>
+    {{end}}
+</section>
+{{end}}

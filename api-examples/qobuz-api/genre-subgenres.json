@@ -1,0 +1,48 @@
+{
+  "genres": {
+    "limit": 50,
+    "offset": 0,
+    "total": 3,
+    "items": [
+      {
+        "id": 117,
+        "color": "#5eabc1",
+        "name": "Pop",
+        "path": [
+          117,
+          112
+        ],
+        "slug": "pop"
+      },
+      {
+        "id": 119,
+        "color": "#5eabc1",
+        "name": "Rock",
+        "path": [
+          119,
+          112
+        ],
+        "slug": "rock"
+      },
+      {
+        "id": 122,
+        "color": "#5eabc1",
+        "name": "Internationaler Pop",
+        "path": [
+          122,
+          112
+        ],
+        "slug": "variete-internationale"
+      }
+    ]
+  },
+  "parent": {
+    "id": 112,
+    "color": "#5eabc1",
+    "name": "Pop/Rock",
+    "path": [
+      112
+    ],
+    "slug": "pop-rock"
+  }
+}

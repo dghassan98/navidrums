@@ -36,7 +36,7 @@ func NewDownloader(pm *catalog.ProviderManager, cfg *config.Config) Downloader {
 }
 
 func (d *downloader) Download(ctx context.Context, track *domain.Track, destPathNoExt string, quality string, logger *slog.Logger, onProgress ProgressFunc) (string, error) {
-	provider := d.providerManager.GetDownloadProvider()
+	provider := d.providerManager.Provider()
 
 	// Lossless payloads can arrive as FLAC inside an MP4 container: that is the
 	// only manifest type Monochrome instances serve. Remuxing to .flac keeps the

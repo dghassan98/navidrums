@@ -67,11 +67,11 @@ func coalesceStringSlice(values ...[]string) []string {
 // -- Main Enrichment Logic --
 
 func (e *MetadataEnricher) EnrichComplete(ctx context.Context, track *domain.Track, logger *slog.Logger) {
-	e.enrichComplete(ctx, track, e.providerManager.GetMetadataProvider(), logger)
+	e.enrichComplete(ctx, track, e.providerManager.Provider(), logger)
 }
 
 func (e *MetadataEnricher) EnrichCompleteFromDownloadProvider(ctx context.Context, track *domain.Track, logger *slog.Logger) {
-	e.enrichComplete(ctx, track, e.providerManager.GetDownloadProvider(), logger)
+	e.enrichComplete(ctx, track, e.providerManager.Provider(), logger)
 }
 
 func (e *MetadataEnricher) enrichComplete(ctx context.Context, track *domain.Track, hifiProvider catalog.Provider, logger *slog.Logger) {
@@ -113,7 +113,7 @@ func (e *MetadataEnricher) enrichComplete(ctx context.Context, track *domain.Tra
 }
 
 func (e *MetadataEnricher) FetchLyrics(ctx context.Context, track *domain.Track, logger *slog.Logger) {
-	e.fetchLyrics(ctx, track, e.providerManager.GetMetadataProvider(), logger)
+	e.fetchLyrics(ctx, track, e.providerManager.Provider(), logger)
 }
 
 func (e *MetadataEnricher) fetchLyrics(ctx context.Context, track *domain.Track, provider catalog.Provider, logger *slog.Logger) {
@@ -134,7 +134,7 @@ func (e *MetadataEnricher) fetchLyrics(ctx context.Context, track *domain.Track,
 }
 
 func (e *MetadataEnricher) EnrichFromHiFi(ctx context.Context, track *domain.Track, logger *slog.Logger) error {
-	return e.enrichFromProvider(ctx, track, e.providerManager.GetMetadataProvider(), logger)
+	return e.enrichFromProvider(ctx, track, e.providerManager.Provider(), logger)
 }
 
 func (e *MetadataEnricher) enrichFromProvider(ctx context.Context, track *domain.Track, provider catalog.Provider, logger *slog.Logger) error {

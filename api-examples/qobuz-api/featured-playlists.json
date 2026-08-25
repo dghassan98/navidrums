@@ -1,0 +1,364 @@
+{
+  "playlists": {
+    "offset": 0,
+    "limit": 5,
+    "total": 5583,
+    "items": [
+      {
+        "owner": {
+          "name": "Qobuz Deutschland",
+          "id": 263470
+        },
+        "image_rectangle_mini": [
+          "https://static.qobuz.com/images/playlists/68346551_32f0ddc574f8127fe3d6bed8fd956cca_rectangle_mini.jpg"
+        ],
+        "users_count": 10,
+        "images150": [
+          "https://static.qobuz.com/images/covers/x4/a1/mawpboz4ka1x4_150.jpg",
+          "https://static.qobuz.com/images/covers/lb/o5/yxqz76pdmo5lb_150.jpg",
+          "https://static.qobuz.com/images/covers/xb/lp/qo9opx4t0lpxb_150.jpg",
+          "https://static.qobuz.com/images/covers/bc/il/w9snd9ro3ilbc_150.jpg"
+        ],
+        "images": [
+          "https://static.qobuz.com/images/covers/x4/a1/mawpboz4ka1x4_50.jpg",
+          "https://static.qobuz.com/images/covers/lb/o5/yxqz76pdmo5lb_50.jpg",
+          "https://static.qobuz.com/images/covers/xb/lp/qo9opx4t0lpxb_50.jpg",
+          "https://static.qobuz.com/images/covers/bc/il/w9snd9ro3ilbc_50.jpg"
+        ],
+        "featured_artists": [
+          {
+            "image": null,
+            "name": "Karol G",
+            "id": 2587039,
+            "albums_count": 115,
+            "slug": "karol-g",
+            "picture": null
+          }
+        ],
+        "is_collaborative": false,
+        "stores": [
+          "AT-de",
+          "CH-de",
+          "DE-de",
+          "LU-de"
+        ],
+        "description": "Karol G wurde am 14. Februar 1991 in Medellín (Kolumbien) geboren und zählt heute zu den größten Stars der Latin Music. Erste Bekanntheit erlangte sie mit Songs wie <i>Amor de Dos</i> und <i>Ahora Me Llama</i>, doch der internationale Durchbruch gelang ihr 2019 mit <i>Tusa</i>, ihrer Zusammenarbeit mit Nicki Minaj.\r\n\r\nSeitdem hat La Bichota, wie sie von ihren Fans liebevoll genannt wird, ein Repertoire aufgebaut, das Reggaeton, Urban Pop, Bachata und karibische Klänge umfasst. Mit <i>Mañana Será Bonito</i> (2023) – dem Album, das mit dem Grammy für das beste Música-Urbana-Album ausgezeichnet wurde – vereinte sie einige ihrer größten Hits, darunter <i>Provenza</i> und <i>TQG</i>.\r\n\r\nNachdem sie sich auf <i>Tropicoqueta</i> (2025) den tropischen Klängen gewidmet hatte, schlägt Karol G 2026 mit <i>NO ME ARREPIENTO DE SENTIR TANTO</i> ein intimeres Kapitel auf. Angeführt von der Single <i>MATADORA</i> und mit Gastbeiträgen von Drake und Bruno Mars festigt das Projekt ihre Präsenz in der weltweiten Urban-Musikszene weiter.\r\n\r\nFoto © Brianna Capozzi",
+        "created_at": 1786089032,
+        "images300": [
+          "https://static.qobuz.com/images/covers/x4/a1/mawpboz4ka1x4_300.jpg",
+          "https://static.qobuz.com/images/covers/lb/o5/yxqz76pdmo5lb_300.jpg",
+          "https://static.qobuz.com/images/covers/xb/lp/qo9opx4t0lpxb_300.jpg",
+          "https://static.qobuz.com/images/covers/bc/il/w9snd9ro3ilbc_300.jpg"
+        ],
+        "tags": [
+          {
+            "is_discover": true,
+            "featured_tag_id": "39",
+            "name_json": "{\"fr\":\"Artistes\",\"en\":\"Artists\",\"de\":\"K\\u00fcnstlerinnen & K\\u00fcnstler\",\"it\":\"Artisti\",\"nl\":\"Artists\",\"es\":\"Artistas\",\"pt\":\"Artistas\",\"pl\":\"Arty\\u015bci\",\"ja\":\"\\u30a2\\u30fc\\u30c6\\u30a3\\u30b9\\u30c8\"}",
+            "slug": "artist",
+            "genre_tag": null,
+            "color": ""
+          },
+          {
+            "is_discover": false,
+            "featured_tag_id": "15",
+            "name_json": "{\"fr\":\"Musiques du monde\",\"en\":\"World\",\"de\":\"Aus aller Welt\",\"it\":\"World Music\",\"nl\":\"World\",\"es\":\"World\",\"pt\":\"M\\u00fasica do Mundo\",\"pl\":\"Muzyka \\u015awiata\",\"ja\":\"World\"}",
+            "slug": "world",
+            "genre_tag": {
+              "name": "Musiques du monde",
+              "genre_id": "94"
+            },
+            "color": ""
+          }
+        ],
+        "duration": 10986,
+        "updated_at": 1787637902,
+        "genres": [
+          {
+            "path": [
+              94
+            ],
+            "name": "World Music",
+            "id": 94,
+            "slug": "musiques-du-monde",
+            "color": "#0070ef",
+            "percent": 50
+          }
+        ],
+        "image_rectangle": [
+          "https://static.qobuz.com/images/playlists/68346551_32f0ddc574f8127fe3d6bed8fd956cca_rectangle.jpg"
+        ],
+        "tracks_count": 55,
+        "public_at": 1786053600,
+        "name": "Karol G",
+        "is_public": true,
+        "id": 68346551,
+        "slug": "karol-g",
+        "is_featured": true
+      },
+      {
+        "owner": {
+          "name": "Qobuz Deutschland",
+          "id": 263470
+        },
+        "image_rectangle_mini": [
+          "https://static.qobuz.com/images/playlists/1429289_e55f1747fad14ebc076bc0e1a1d58e82_rectangle_mini.jpg"
+        ],
+        "users_count": 456,
+        "images150": [
+          "https://static.qobuz.com/images/covers/06/12/0890846001206_150.jpg",
+          "https://static.qobuz.com/images/covers/36/06/5414939950636_150.jpg",
+          "https://static.qobuz.com/images/covers/67/08/5414939930867_150.jpg",
+          "https://static.qobuz.com/images/covers/is/36/a2dxa18rp36is_150.jpg"
+        ],
+        "images": [
+          "https://static.qobuz.com/images/covers/06/12/0890846001206_50.jpg",
+          "https://static.qobuz.com/images/covers/36/06/5414939950636_50.jpg",
+          "https://static.qobuz.com/images/covers/67/08/5414939930867_50.jpg",
+          "https://static.qobuz.com/images/covers/is/36/a2dxa18rp36is_50.jpg"
+        ],
+        "featured_artists": [],
+        "is_collaborative": false,
+        "stores": [
+          "AT-de",
+          "CH-de",
+          "DE-de",
+          "LU-de"
+        ],
+        "description": "​Die Sahara hat einen Blues hervorgebracht, der gut zu ihr passt. Einen Blues, der die musikalische Tradition Afrikas mit elektrischer Gitarre in Einklang bringt. Als ob der Mississippi ​durch die Gebiete von Mali, dem Niger und Mauretanien weiterfließen würde. Zum Teil ist dies die Musik der Tuareg, einem afrikanischen Berbervolk, das Dürre und libysche Konzentrationslager in den 80er und 90er Jahren erleiden musste, das aber auch ein Volk ist, das mit Rock-Musik aufgewuchs...",
+        "created_at": 1491983532,
+        "images300": [
+          "https://static.qobuz.com/images/covers/06/12/0890846001206_300.jpg",
+          "https://static.qobuz.com/images/covers/36/06/5414939950636_300.jpg",
+          "https://static.qobuz.com/images/covers/67/08/5414939930867_300.jpg",
+          "https://static.qobuz.com/images/covers/is/36/a2dxa18rp36is_300.jpg"
+        ],
+        "tags": [
+          {
+            "is_discover": true,
+            "featured_tag_id": "20",
+            "name_json": "{\"fr\":\"Th\\u00e9matiques\",\"en\":\"Focus\",\"de\":\"Fokus\",\"it\":\"Focus\",\"nl\":\"Focus\",\"es\":\"Foco\",\"pt\":\"Em Foco\",\"pl\":\"Skupienie\",\"ja\":\"\\u30d5\\u30a9\\u30fc\\u30ab\\u30b9\"}",
+            "slug": "focus",
+            "genre_tag": null,
+            "color": ""
+          },
+          {
+            "is_discover": false,
+            "featured_tag_id": "15",
+            "name_json": "{\"fr\":\"Musiques du monde\",\"en\":\"World\",\"de\":\"Aus aller Welt\",\"it\":\"World Music\",\"nl\":\"World\",\"es\":\"World\",\"pt\":\"M\\u00fasica do Mundo\",\"pl\":\"Muzyka \\u015awiata\",\"ja\":\"World\"}",
+            "slug": "world",
+            "genre_tag": {
+              "name": "Musiques du monde",
+              "genre_id": "94"
+            },
+            "color": ""
+          },
+          {
+            "is_discover": false,
+            "featured_tag_id": "11",
+            "name_json": "{\"fr\":\"Blues-country-folk\",\"en\":\"Blues-country-folk\",\"de\":\"Blues-country-folk\",\"it\":\"Blues-country-folk\",\"nl\":\"Blues-country-folk\",\"es\":\"Blues-country-folk\",\"pt\":\"Blues-country-folk\",\"pl\":\"Blues \\/ Country \\/ Folk\",\"ja\":\"Blues-country-folk\"}",
+            "slug": "blues-country-folk",
+            "genre_tag": {
+              "name": "Blues/Country/Folk",
+              "genre_id": "2"
+            },
+            "color": ""
+          }
+        ],
+        "duration": 10447,
+        "updated_at": 1787640307,
+        "genres": [
+          {
+            "path": [
+              94
+            ],
+            "name": "World Music",
+            "id": 94,
+            "slug": "musiques-du-monde",
+            "color": "#0070ef",
+            "percent": 50
+          },
+          {
+            "path": [
+              2
+            ],
+            "name": "Blues/Country/Folk",
+            "id": 2,
+            "slug": "blues-country-folk",
+            "color": "#0070ef",
+            "percent": 50
+          }
+        ],
+        "image_rectangle": [
+          "https://static.qobuz.com/images/playlists/1429289_e55f1747fad14ebc076bc0e1a1d58e82_rectangle.jpg"
+        ],
+        "tracks_count": 35,
+        "public_at": 1491992211,
+        "name": "Wüsten-Blues",
+        "is_public": true,
+        "id": 1429289,
+        "slug": "wuesten-blues",
+        "is_featured": true
+      },
+      {
+        "owner": {
+          "name": "Qobuz Deutschland",
+          "id": 263470
+        },
+        "image_rectangle_mini": [
+          "https://static.qobuz.com/images/playlists/68982681_7fc5384e8de27770aab86181717e835e_rectangle_mini.jpg"
+        ],
+        "users_count": 5,
+        "images150": [
+          "https://static.qobuz.com/images/covers/kc/7c/aav1k8t9k7ckc_150.jpg",
+          "https://static.qobuz.com/images/covers/pb/4h/sc5vhtblg4hpb_150.jpg",
+          "https://static.qobuz.com/images/covers/g0/vh/zb5hv6k6dvhg0_150.jpg",
+          "https://static.qobuz.com/images/covers/oc/1i/pybpdwxmk1ioc_150.jpg"
+        ],
+        "images": [
+          "https://static.qobuz.com/images/covers/kc/7c/aav1k8t9k7ckc_50.jpg",
+          "https://static.qobuz.com/images/covers/pb/4h/sc5vhtblg4hpb_50.jpg",
+          "https://static.qobuz.com/images/covers/g0/vh/zb5hv6k6dvhg0_50.jpg",
+          "https://static.qobuz.com/images/covers/oc/1i/pybpdwxmk1ioc_50.jpg"
+        ],
+        "featured_artists": [],
+        "is_collaborative": false,
+        "stores": [
+          "AT-de",
+          "CH-de",
+          "DE-de",
+          "LU-de"
+        ],
+        "description": "Vom 24.-30. August 2026 wird Berlin wieder zum Hotspot für neue Sounds und Ideen: Live-Konzerte, experimentelle Musikformate, Talks und mehr! pop-kultur.berlin",
+        "created_at": 1787320848,
+        "images300": [
+          "https://static.qobuz.com/images/covers/kc/7c/aav1k8t9k7ckc_300.jpg",
+          "https://static.qobuz.com/images/covers/pb/4h/sc5vhtblg4hpb_300.jpg",
+          "https://static.qobuz.com/images/covers/g0/vh/zb5hv6k6dvhg0_300.jpg",
+          "https://static.qobuz.com/images/covers/oc/1i/pybpdwxmk1ioc_300.jpg"
+        ],
+        "tags": [
+          {
+            "is_discover": false,
+            "featured_tag_id": "27",
+            "name_json": "{\"fr\":\"Deutsche Musik\",\"en\":\"Deutsche Musik\",\"de\":\"Deutsche Musik\",\"it\":\"Deutsche Musik\",\"nl\":\"Deutsche Musik\",\"es\":\"Deutsche Musik\",\"pt\":\"Deutsche Musik\",\"pl\":\"Muzyka niemiecka\",\"ja\":\"Deutsche Musik\"}",
+            "slug": "deutschemusik",
+            "genre_tag": {
+              "name": "Allemagne",
+              "genre_id": "160"
+            },
+            "color": ""
+          },
+          {
+            "is_discover": true,
+            "featured_tag_id": "23",
+            "name_json": "{\"fr\":\"\\u00c9v\\u00e9nements & M\\u00e9dias\",\"en\":\"Events & Media\",\"de\":\"Events & Medien\",\"it\":\"Eventi & Media\",\"nl\":\"Events & media\",\"es\":\"Eventos & Medios\",\"pt\":\"Eventos e M\\u00eddia\",\"pl\":\"Wydarzenia\",\"ja\":\"\\u30a4\\u30d9\\u30f3\\u30c8\\u30fb\\u30e1\\u30c7\\u30a3\\u30a2\"}",
+            "slug": "event",
+            "genre_tag": null,
+            "color": ""
+          },
+          {
+            "is_discover": false,
+            "featured_tag_id": "10",
+            "name_json": "{\"fr\":\"Rap\",\"en\":\"Rap\",\"de\":\"Rap\",\"it\":\"Rap\",\"nl\":\"Rap\",\"es\":\"Rap\",\"pt\":\"Rap\",\"pl\":\"Rap\",\"ja\":\"Rap\"}",
+            "slug": "rap",
+            "genre_tag": {
+              "name": "Rap",
+              "genre_id": "133"
+            },
+            "color": ""
+          },
+          {
+            "is_discover": false,
+            "featured_tag_id": "9",
+            "name_json": "{\"fr\":\"Soul-funk-R&B\",\"en\":\"Soul-funk-R&B\",\"de\":\"Soul-funk-R&B\",\"it\":\"Soul-funk-R&B\",\"nl\":\"Soul-funk-R&B\",\"es\":\"Soul-funk-R&B\",\"pt\":\"Soul-funk-R&B\",\"pl\":\"Soul\",\"ja\":\"Soul-funk-R&B\"}",
+            "slug": "soul",
+            "genre_tag": {
+              "name": "Soul/Funk/R&B",
+              "genre_id": "127"
+            },
+            "color": ""
+          },
+          {
+            "is_discover": false,
+            "featured_tag_id": "8",
+            "name_json": "{\"fr\":\"Electro\",\"en\":\"Electro\",\"de\":\"Elektro\",\"it\":\"Elettronica\",\"nl\":\"Electro\",\"es\":\"Electro\",\"pt\":\"Electr\\u00f3nica\",\"pl\":\"Electro\",\"ja\":\"Electro\"}",
+            "slug": "electro",
+            "genre_tag": {
+              "name": "Électronique",
+              "genre_id": "64"
+            },
+            "color": ""
+          },
+          {
+            "is_discover": false,
+            "featured_tag_id": "7",
+            "name_json": "{\"fr\":\"Pop-rock\",\"en\":\"Pop-rock\",\"de\":\"Pop-Rock\",\"it\":\"Pop-rock\",\"nl\":\"Pop-rock\",\"es\":\"Pop-rock\",\"pt\":\"Pop-rock\",\"pl\":\"Pop-Rock\",\"ja\":\"Pop-rock\"}",
+            "slug": "pop-rock",
+            "genre_tag": {
+              "name": "Pop/Rock",
+              "genre_id": "112"
+            },
+            "color": ""
+          }
+        ],
+        "duration": 7120,
+        "updated_at": 1787605064,
+        "genres": [
+          {
+            "path": [
+              94,
+              151,
+              160
+            ],
+            "name": "Deutschland",
+            "id": 160,
+            "slug": "allemagne",
+            "color": "#0070ef",
+            "percent": 50
+          },
+          {
+            "path": [
+              133
+            ],
+            "name": "Rap",
+            "id": 133,
+            "slug": "rap-hip-hop",
+            "color": "#0070ef",
+            "percent": 50
+          },
+          {
+            "path": [
+              127
+            ],
+            "name": "Soul/Funk/R&B",
+            "id": 127,
+            "slug": "soul-funk-rap",
+            "color": "#0070ef",
+            "percent": 50
+          },
+          {
+            "path": [
+              64
+            ],
+            "name": "Electronic",
+            "id": 64,
+            "slug": "electro",
+            "color": "#0070ef",
+            "percent": 50
+          }
+        ],
+        "image_rectangle": [
+          "https://static.qobuz.com/images/playlists/68982681_7fc5384e8de27770aab86181717e835e_rectangle.jpg"
+        ],
+        "tracks_count": 35,
+        "public_at": 1787263200,
+        "name": "Pop-Kultur Festival 2026",
+        "is_public": true,
+        "id": 68982681,
+        "slug": "pop-kultur-festival-2026",
+        "is_featured": true
+      }
+    ]
+  }
+}

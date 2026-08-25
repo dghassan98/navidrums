@@ -102,7 +102,7 @@ func (s *DownloadsService) EnqueueSyncMetadataJob(providerID string) error {
 }
 
 func (s *DownloadsService) EnqueueSyncHiFiJob(providerID string) error {
-	return s.enqueueSyncJob(providerID, domain.JobTypeSyncHiFi)
+	return s.enqueueSyncJob(providerID, domain.JobTypeSyncProvider)
 }
 
 func (s *DownloadsService) enqueueSyncJob(providerID string, jobType domain.JobType) error {
@@ -156,7 +156,7 @@ func (s *DownloadsService) DeleteDownload(providerID string) error {
 }
 
 func (s *DownloadsService) EnqueueSyncJobs() (int, error) {
-	return s.enqueueSyncJobsByType(domain.JobTypeSyncHiFi)
+	return s.enqueueSyncJobsByType(domain.JobTypeSyncProvider)
 }
 
 func (s *DownloadsService) EnqueueSyncMetadataJobs() (int, error) {

@@ -16,7 +16,7 @@ const (
 	JobTypeDiscography     JobType = "discography"
 	JobTypeSyncFile        JobType = "sync_file"
 	JobTypeSyncMusicBrainz JobType = "sync_musicbrainz"
-	JobTypeSyncHiFi        JobType = "sync_hifi"
+	JobTypeSyncProvider    JobType = "sync_provider"
 )
 
 type JobStatus string
@@ -230,10 +230,37 @@ type Album struct {
 	Artists      []string       `json:"artists,omitempty"`
 	Tracks       []CatalogTrack `json:"tracks"`
 	ArtistIDs    []string       `json:"artist_ids,omitempty"`
+	LabelID      string         `json:"label_id,omitempty"`
+	GenreID      string         `json:"genre_id,omitempty"`
 	TotalDiscs   int            `json:"total_discs,omitempty"`
 	TotalTracks  int            `json:"total_tracks,omitempty"`
 	Year         int            `json:"year,omitempty"`
 	Explicit     bool           `json:"explicit,omitempty"`
+
+	// Owned is view state, set by browse handlers from the tracks table so a
+	// card can show that Navidrums already fetched this album. It is never
+	// serialised: the cache would otherwise persist one request's answer.
+	Owned bool `json:"-"`
+}
+
+// Genre is one node of the Qobuz browse taxonomy. Children is populated only
+// for top level genres, which is as deep as the tree goes.
+type Genre struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Slug     string  `json:"slug,omitempty"`
+	Color    string  `json:"color,omitempty"`
+	Children []Genre `json:"children,omitempty"`
+}
+
+// Label is a record label and one page of its catalogue.
+type Label struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description,omitempty"`
+	ImageURL    string  `json:"image_url,omitempty"`
+	AlbumsCount int     `json:"albums_count,omitempty"`
+	Albums      []Album `json:"albums,omitempty"`
 }
 
 type Artist struct {

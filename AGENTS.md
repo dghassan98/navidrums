@@ -118,6 +118,4 @@ See `CONFIGURATION.md` / `README.md` for the full list. These are the ones agent
 - `ARCHITECTURE.md` — package structure, layer flow, metadata enrichment, sync jobs
 - `CONFIGURATION.md` — all env vars, template examples, genre mapping
 - `DESIGN_SYSTEM.md` — CSS/HTML patterns for UI work
-- `MONOCHROME_API.md` — default catalog/playback API: `/trackManifests/`, preview handling, instances
-- `HIFI_API.md` — legacy catalog API endpoints (shared metadata routes)
-- `QOBUZ_API.md` — both Qobuz providers: the shared proxy and `qobuz-direct` (login, request signing, format ids)
+- `QOBUZ_API.md` — the Qobuz API: login, request signing, format ids, and the browse endpoints

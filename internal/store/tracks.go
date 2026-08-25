@@ -480,3 +480,33 @@ func (db *DB) GetAlbumSampleTrack(albumID string) (*domain.Track, error) {
 	}
 	return &track, nil
 }
+
+// OwnedAlbumIDs returns the subset of albumIDs that already have at least one
+// track row, keyed for direct lookup.
+//
+// The tracks table is the only honest record of what Navidrums fetched: files
+// are moved out of the downloads directory by external tooling, so checking the
+// filesystem would report missing albums that were downloaded successfully.
+func (db *DB) OwnedAlbumIDs(albumIDs []string) (map[string]bool, error) {
+	owned := make(map[string]bool, len(albumIDs))
+	if len(albumIDs) == 0 {
+		// An empty IN () is a syntax error, and there is nothing to ask anyway.
+		return owned, nil
+	}
+
+	query, args, err := sqlx.In(
+		`SELECT DISTINCT album_id FROM tracks WHERE album_id IN (?)`, albumIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	var found []string
+	if err := db.Select(&found, db.Rebind(query), args...); err != nil {
+		return nil, err
+	}
+
+	for _, id := range found {
+		owned[id] = true
+	}
+	return owned, nil
+}

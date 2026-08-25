@@ -18,26 +18,63 @@ type Cache interface {
 }
 
 type CachedProvider struct {
-	provider     Provider
-	cache        Cache
-	providerType ProviderType
-	cacheTTL     time.Duration
+	provider Provider
+	cache    Cache
+	cacheTTL time.Duration
 }
 
-func NewCachedProvider(provider Provider, cache Cache, cacheTTL time.Duration, providerType ProviderType) *CachedProvider {
+func NewCachedProvider(provider Provider, cache Cache, cacheTTL time.Duration) *CachedProvider {
 	return &CachedProvider{
-		provider:     provider,
-		cache:        cache,
-		cacheTTL:     cacheTTL,
-		providerType: providerType,
+		provider: provider,
+		cache:    cache,
+		cacheTTL: cacheTTL,
 	}
 }
 
-// key namespaces a cache entry by provider type. Every chain shares one cache
-// table, so without this a Monochrome response would be served to a Qobuz
-// request until the TTL expired.
+// cacheKeyPrefix namespaces every entry. It matches the prefix the qobuz-direct
+// chain already used, so caches stay warm across the upgrade and cannot collide
+// with entries left behind by the providers that were removed.
+const cacheKeyPrefix = "qobuz-direct:"
+
+// Browse responses age very differently from catalog lookups, so they carry
+// their own TTLs rather than the configured default.
+const (
+	genresCacheTTL   = 24 * time.Hour
+	featuredCacheTTL = time.Hour
+	labelCacheTTL    = time.Hour
+)
+
 func (c *CachedProvider) key(format string, args ...any) string {
-	return string(c.providerType) + ":" + fmt.Sprintf(format, args...)
+	return cacheKeyPrefix + fmt.Sprintf(format, args...)
+}
+
+// cached runs fetch through the cache under key, decoding into T. A cache miss,
+// a decode failure or an unmarshalable result all fall through to fetch rather
+// than failing: a broken cache entry must never break the request.
+func cached[T any](c *CachedProvider, key string, ttl time.Duration, fetch func() (T, error)) (T, error) {
+	var zero T
+
+	data, err := c.cache.GetCache(key)
+	if err != nil {
+		return zero, err
+	}
+	if data != nil {
+		var out T
+		if json.Unmarshal(data, &out) == nil {
+			return out, nil
+		}
+	}
+
+	out, err := fetch()
+	if err != nil {
+		return zero, err
+	}
+
+	if encoded, marshalErr := json.Marshal(out); marshalErr == nil {
+		_ = c.cache.SetCache(key, encoded, ttl)
+	}
+
+	return out, nil
 }
 
 func (c *CachedProvider) Search(ctx context.Context, query string, searchType string) (*domain.SearchResult, error) {
@@ -260,6 +297,33 @@ func (c *CachedProvider) GetRecommendations(ctx context.Context, id string) ([]d
 
 func (c *CachedProvider) GetLyrics(ctx context.Context, trackID string) (string, string, error) {
 	return c.provider.GetLyrics(ctx, trackID)
+}
+
+func (c *CachedProvider) GetFeatured(ctx context.Context, kind, genreID string, limit, offset int) ([]domain.Album, error) {
+	key := c.key("featured:%s:%s:%d:%d", kind, genreID, limit, offset)
+	return cached(c, key, featuredCacheTTL, func() ([]domain.Album, error) {
+		return c.provider.GetFeatured(ctx, kind, genreID, limit, offset)
+	})
+}
+
+func (c *CachedProvider) GetFeaturedPlaylists(ctx context.Context, genreID string, limit, offset int) ([]domain.Playlist, error) {
+	key := c.key("featured-playlists:%s:%d:%d", genreID, limit, offset)
+	return cached(c, key, featuredCacheTTL, func() ([]domain.Playlist, error) {
+		return c.provider.GetFeaturedPlaylists(ctx, genreID, limit, offset)
+	})
+}
+
+func (c *CachedProvider) GetGenres(ctx context.Context) ([]domain.Genre, error) {
+	return cached(c, c.key("genres"), genresCacheTTL, func() ([]domain.Genre, error) {
+		return c.provider.GetGenres(ctx)
+	})
+}
+
+func (c *CachedProvider) GetLabel(ctx context.Context, labelID string, limit, offset int) (*domain.Label, error) {
+	key := c.key("label:%s:%d:%d", labelID, limit, offset)
+	return cached(c, key, labelCacheTTL, func() (*domain.Label, error) {
+		return c.provider.GetLabel(ctx, labelID, limit, offset)
+	})
 }
 
 func (c *CachedProvider) ClearCache() error {

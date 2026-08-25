@@ -103,3 +103,46 @@ func (p *MockProvider) GetSimilarArtists(ctx context.Context, id string) ([]doma
 func (p *MockProvider) GetLyrics(ctx context.Context, trackID string) (string, string, error) {
 	return "Mock lyrics for testing", "[00:00.00] Mock lyrics for testing", nil
 }
+
+func (p *MockProvider) GetFeatured(ctx context.Context, kind, genreID string, limit, offset int) ([]domain.Album, error) {
+	return []domain.Album{
+		{ID: "301", Title: "Featured Mock Album 1", Artist: "Mock Artist", LabelID: "9", GenreID: "112"},
+		{ID: "302", Title: "Featured Mock Album 2", Artist: "Mock Artist", LabelID: "9", GenreID: "112"},
+	}, nil
+}
+
+func (p *MockProvider) GetFeaturedPlaylists(ctx context.Context, genreID string, limit, offset int) ([]domain.Playlist, error) {
+	return []domain.Playlist{
+		{ProviderID: "401", Title: "Featured Mock Playlist"},
+	}, nil
+}
+
+func (p *MockProvider) GetGenres(ctx context.Context) ([]domain.Genre, error) {
+	return []domain.Genre{
+		{ID: "112", Name: "Pop/Rock", Slug: "pop-rock", Children: []domain.Genre{
+			{ID: "117", Name: "Pop", Slug: "pop"},
+			{ID: "119", Name: "Rock", Slug: "rock"},
+		}},
+		{ID: "80", Name: "Jazz", Slug: "jazz"},
+	}, nil
+}
+
+func (p *MockProvider) GetLabel(ctx context.Context, labelID string, limit, offset int) (*domain.Label, error) {
+	return &domain.Label{
+		ID:          labelID,
+		Name:        "Mock Label",
+		AlbumsCount: 2,
+		Albums: []domain.Album{
+			{ID: "501", Title: "Label Mock Album 1", Artist: "Mock Artist"},
+			{ID: "502", Title: "Label Mock Album 2", Artist: "Mock Artist"},
+		},
+	}, nil
+}
+
+func (p *MockProvider) GetRecommendations(ctx context.Context, id string) ([]domain.CatalogTrack, error) {
+	return []domain.CatalogTrack{
+		{ID: "601", Title: "Recommended Mock Track", ArtistID: "1", Artist: "Mock Artist"},
+	}, nil
+}
+
+var _ Provider = (*MockProvider)(nil)

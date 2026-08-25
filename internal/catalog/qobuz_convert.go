@@ -44,19 +44,34 @@ func (r *QobuzSearchData) ToDomain() *domain.SearchResult {
 }
 
 func (item *QobuzSearchAlbumItem) ToDomain() domain.Album {
-	return domain.Album{
-		ID:          item.ID,
-		Title:       item.Title,
-		ArtistID:    strconv.Itoa(item.Artist.ID),
-		Artist:      item.Artist.Name,
-		AlbumArtURL: item.Image.Large,
-		URL:         item.URL,
-		Genre:       item.Genre.Name,
-		Label:       item.Label.Name,
-		UPC:         item.UPC,
-		Year:        parseYear(item.ReleaseDateOriginal),
-		TotalTracks: item.TracksCount,
+	album := domain.Album{
+		ID:           item.ID,
+		Title:        item.Title,
+		ArtistID:     strconv.Itoa(item.Artist.ID),
+		Artist:       item.Artist.Name,
+		AlbumArtURL:  item.Image.Large,
+		URL:          item.URL,
+		Genre:        item.Genre.Name,
+		Label:        item.Label.Name,
+		UPC:          item.UPC,
+		ReleaseDate:  item.ReleaseDateOriginal,
+		Year:         parseYear(item.ReleaseDateOriginal),
+		TotalTracks:  item.TracksCount,
+		TotalDiscs:   item.MediaCount,
+		Explicit:     item.ParentalWarning,
+		AudioQuality: resolveQobuzAudioQuality(item.Hires, item.MaximumBitDepth),
 	}
+
+	// IDs are what make the label and genre clickable. Zero means Qobuz sent
+	// no such object, and the UI then renders plain text instead of a link.
+	if item.Label.ID != 0 {
+		album.LabelID = strconv.Itoa(item.Label.ID)
+	}
+	if item.Genre.ID != 0 {
+		album.GenreID = strconv.Itoa(item.Genre.ID)
+	}
+
+	return album
 }
 
 func (item *QobuzSearchArtistItem) ToDomain() domain.Artist {
@@ -93,7 +108,7 @@ func (resp *QobuzAlbumResponse) ToDomain() *domain.Album {
 		artists = append(artists, a.Name)
 	}
 
-	return &domain.Album{
+	album := &domain.Album{
 		ID:          resp.ID,
 		Title:       resp.Title,
 		ArtistID:    strconv.Itoa(resp.Artist.ID),
@@ -110,6 +125,16 @@ func (resp *QobuzAlbumResponse) ToDomain() *domain.Album {
 		ArtistIDs:   artistIDs,
 		Artists:     artists,
 	}
+
+	// The IDs are what make label and genre clickable on the album page.
+	if resp.Label.ID != 0 {
+		album.LabelID = strconv.Itoa(resp.Label.ID)
+	}
+	if resp.Genre.ID != 0 {
+		album.GenreID = strconv.Itoa(resp.Genre.ID)
+	}
+
+	return album
 }
 
 func (item *QobuzTrackItem) ToDomain() domain.CatalogTrack {

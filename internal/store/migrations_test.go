@@ -2,62 +2,141 @@ package store
 
 import (
 	"testing"
-
-	"github.com/cesargomez89/navidrums/internal/constants"
 )
 
-// TestSeedDefaultProviders covers migration 16: a fresh install gets the
-// default Monochrome instance and is pointed at it, while the official Qobuz
-// endpoint is seeded but never selected on its own.
-func TestSeedDefaultProviders(t *testing.T) {
+// TestMigration17RemovesMultiProvider covers the qobuz-only migration: a
+// custom qobuz-direct endpoint survives as a setting, the providers table and
+// the provider selection settings go, and queued sync_hifi jobs are renamed.
+func TestMigration17RemovesMultiProvider(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
 
-	repo := NewProvidersRepo(db)
+	// setupTestDB runs every migration, so rebuild the pre-17 state and run
+	// migration 17 over it directly.
+	seedLegacyProviderState(t, db)
+	runMigration(t, db, 17)
 
-	t.Run("seeds the default monochrome instance", func(t *testing.T) {
-		providers, err := repo.ListByType("monochrome")
-		if err != nil {
-			t.Fatalf("ListByType failed: %v", err)
-		}
-		if len(providers) != 1 {
-			t.Fatalf("monochrome providers = %d, want 1", len(providers))
-		}
-		if providers[0].URL != constants.MonochromeDefaultURL {
-			t.Errorf("url = %q, want %q", providers[0].URL, constants.MonochromeDefaultURL)
-		}
-	})
-
-	t.Run("seeds the official qobuz endpoint", func(t *testing.T) {
-		providers, err := repo.ListByType("qobuz-direct")
-		if err != nil {
-			t.Fatalf("ListByType failed: %v", err)
-		}
-		if len(providers) != 1 {
-			t.Fatalf("qobuz-direct providers = %d, want 1", len(providers))
-		}
-		if providers[0].URL != constants.QobuzDirectDefaultURL {
-			t.Errorf("url = %q, want %q", providers[0].URL, constants.QobuzDirectDefaultURL)
-		}
-	})
-
-	t.Run("points a fresh install at monochrome", func(t *testing.T) {
+	t.Run("carries a custom endpoint into settings", func(t *testing.T) {
 		settings := NewSettingsRepo(db)
-		keys := []string{
-			SettingActiveMetadataProvider,
-			SettingActiveDownloadProvider,
-			SettingActiveStreamingProvider,
+		val, err := settings.Get(SettingQobuzBaseURL)
+		if err != nil {
+			t.Fatalf("Get(%q) failed: %v", SettingQobuzBaseURL, err)
 		}
-		for _, key := range keys {
-			val, err := settings.Get(key)
-			if err != nil {
-				t.Fatalf("Get(%q) failed: %v", key, err)
+		if val != "https://qobuz.example.test/api" {
+			t.Errorf("%s = %q, want the custom endpoint", SettingQobuzBaseURL, val)
+		}
+	})
+
+	t.Run("drops the providers table", func(t *testing.T) {
+		var name string
+		err := db.QueryRow(
+			`SELECT name FROM sqlite_master WHERE type='table' AND name='providers'`).Scan(&name)
+		if err == nil {
+			t.Fatal("providers table still exists")
+		}
+	})
+
+	t.Run("removes provider selection settings", func(t *testing.T) {
+		for _, key := range []string{
+			"active_provider", "active_metadata_provider",
+			"active_download_provider", "active_streaming_provider",
+			"custom_providers",
+		} {
+			var count int
+			if err := db.QueryRow(
+				`SELECT COUNT(*) FROM settings WHERE key = ?`, key).Scan(&count); err != nil {
+				t.Fatalf("count %q failed: %v", key, err)
 			}
-			if val != "monochrome" {
-				t.Errorf("%s = %q, want monochrome", key, val)
+			if count != 0 {
+				t.Errorf("setting %q survived the migration", key)
 			}
 		}
 	})
+
+	t.Run("renames sync_hifi jobs", func(t *testing.T) {
+		var old, renamed int
+		if err := db.QueryRow(
+			`SELECT COUNT(*) FROM jobs WHERE type = 'sync_hifi'`).Scan(&old); err != nil {
+			t.Fatalf("count sync_hifi failed: %v", err)
+		}
+		if err := db.QueryRow(
+			`SELECT COUNT(*) FROM jobs WHERE type = 'sync_provider'`).Scan(&renamed); err != nil {
+			t.Fatalf("count sync_provider failed: %v", err)
+		}
+		if old != 0 {
+			t.Errorf("sync_hifi jobs = %d, want 0", old)
+		}
+		if renamed != 1 {
+			t.Errorf("sync_provider jobs = %d, want 1", renamed)
+		}
+	})
+}
+
+// TestMigration17OnFreshInstall covers the case the first query hits: no
+// providers table at all, which must not fail the migration.
+func TestMigration17OnFreshInstall(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	runMigration(t, db, 17)
+
+	settings := NewSettingsRepo(db)
+	if val, err := settings.Get(SettingQobuzBaseURL); err == nil && val != "" {
+		t.Errorf("%s = %q, want unset on a fresh install", SettingQobuzBaseURL, val)
+	}
+}
+
+func seedLegacyProviderState(t *testing.T, db *DB) {
+	t.Helper()
+
+	stmts := []string{
+		`CREATE TABLE providers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			url TEXT NOT NULL,
+			position INTEGER NOT NULL DEFAULT 0,
+			type TEXT NOT NULL DEFAULT 'hifi'
+		)`,
+		`INSERT INTO providers (type, url, name, position)
+		 VALUES ('qobuz-direct', 'https://qobuz.example.test/api', 'Custom', 0)`,
+		`INSERT INTO providers (type, url, name, position)
+		 VALUES ('monochrome', 'https://mono.example.test', 'Mono', 1)`,
+		`INSERT INTO settings (key, value) VALUES ('active_metadata_provider', 'monochrome')`,
+		`INSERT INTO settings (key, value) VALUES ('active_download_provider', 'monochrome')`,
+		`INSERT INTO settings (key, value) VALUES ('active_streaming_provider', 'monochrome')`,
+		`INSERT INTO settings (key, value) VALUES ('active_provider', 'monochrome')`,
+		`INSERT INTO settings (key, value) VALUES ('custom_providers', '[]')`,
+		`INSERT INTO jobs (type, status, source_id) VALUES ('sync_hifi', 'queued', 'track-1')`,
+	}
+
+	for _, q := range stmts {
+		if _, err := db.Exec(q); err != nil {
+			t.Fatalf("seed failed for %q: %v", q, err)
+		}
+	}
+}
+
+func runMigration(t *testing.T, db *DB, version int) {
+	t.Helper()
+
+	for _, m := range migrations {
+		if m.version != version {
+			continue
+		}
+		tx, err := db.root.Beginx()
+		if err != nil {
+			t.Fatalf("begin failed: %v", err)
+		}
+		if err := m.up(tx); err != nil {
+			_ = tx.Rollback()
+			t.Fatalf("migration %d failed: %v", version, err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatalf("commit failed: %v", err)
+		}
+		return
+	}
+	t.Fatalf("migration %d not found", version)
 }
 
 // TestGetJobStatsOnEmptyHistory covers the NULL that SUM returns over zero

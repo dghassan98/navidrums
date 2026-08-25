@@ -3,15 +3,16 @@
 A lightweight self-hosted web application for browsing and downloading music to your Navidrome library.
 Optimized for low-end hardware.
 
-**Multi-Provider Architecture**: Browse, download and stream via Monochrome — a single API instance covers all three. HiFi (Tidal API proxy) and Qobuz remain available as alternatives or fallbacks.
+**Qobuz-powered**: Browsing, downloads and streaming all go through the official Qobuz API using your own subscription. Set the `QOBUZ_*` credentials and everything works from one source.
 
 ## Features
 
 ### Core Functionality
-- **Browse & Search**: Discover artists, albums, playlists, and tracks from Monochrome, HiFi (Tidal) or Qobuz catalog APIs
+- **Browse & Search**: Discover artists, albums, playlists, and tracks from the Qobuz catalog
+- **Discover Home**: Configurable editorial rows — New Releases, Editor Picks, Press Awards, Ideal Discography and curated playlists — filterable by genre
+- **Genre & Label Browsing**: Drill into the Qobuz genre tree, or browse a label's back catalogue from any album page
 - **Stream Preview**: Play tracks directly from search results with play/pause controls on track cards
 - **Download Queue**: Asynchronous job queuing with configurable concurrency control
-- **Multi-Provider**: Separate provider selection for metadata browsing, downloads, and streaming — run everything on Monochrome, or mix in HiFi and Qobuz in any combination
 - **Quality Selection**: Choose from LOSSLESS, HI_RES_LOSSLESS, HIGH, or LOW audio quality
 
 ### Download Management
@@ -19,7 +20,7 @@ Optimized for low-end hardware.
 - **Downloads Browser**: Browse, search (by track, album, artist, genre), filter (by genre including "no_genre"), and manage downloaded tracks with bulk actions (delete, sync, set metadata)
 - **Bulk Metadata**: Set genre, year, mood, and style for multiple tracks at once
 - **Sync to File**: Re-tag audio files with updated metadata from Database
-- **Sync All**: Fetch missing metadata from provider (Monochrome/HiFi/Qobuz) and MusicBrainz, update Database and sync to files
+- **Sync All**: Fetch missing metadata from Qobuz and MusicBrainz, update Database and sync to files
 - **History Tracking**: View last 20 completed/failed/cancelled downloads
 - **Job Management**: Cancel active jobs, retry failed downloads, clear history
 - **Stuck Job Recovery**: Automatic reset of interrupted downloads on startup
@@ -44,12 +45,11 @@ Optimized for low-end hardware.
 - **Empty Directory Cleanup**: Automatic removal of empty folders after deletions
 - **Playlist Generation**: Automatic M3U file creation for playlists and artist top tracks
 
-### Multi-Provider Architecture
-- **Separate Per-Operation Selection**: Choose different providers for metadata browsing, downloads, and streaming
-- **Provider Types**: Monochrome, Qobuz Direct (your own subscription), HiFi (Tidal API proxy) and Qobuz (shared proxy) — each can have multiple endpoint URLs as fallbacks
-- **Provider Fallback**: Multiple URLs of the same type tried in order until one succeeds
-- **Per-Type Caching**: Each provider chain has its own response cache with configurable TTL
-- **API Throttling**: Built-in request throttling for external APIs (Monochrome, HiFi, Qobuz, MusicBrainz) to prevent rate limiting
+### Catalog
+- **Single Provider**: Qobuz, called directly with your own subscription — no proxies, no provider selection to get wrong
+- **Response Caching**: Catalog responses cached with a configurable TTL; the genre tree for 24 hours, editorial rows and label pages for an hour
+- **Already-Downloaded Marking**: Browse pages check the tracks table and dim albums Navidrums already fetched
+- **API Throttling**: Built-in request throttling for Qobuz and MusicBrainz to prevent rate limiting
 
 ### Performance & Reliability
 - **Automatic Retries**: Exponential backoff with 3 attempts for failed downloads
@@ -65,7 +65,8 @@ Optimized for low-end hardware.
 - **Track Details View**: Comprehensive file, audio, and MusicBrainz metadata display
 
 ### Settings
-- **Provider Management**: Add, reorder, edit, and remove Monochrome, HiFi and Qobuz provider URLs; select which provider type to use per operation (metadata, download, streaming)
+- **Qobuz Credentials**: Enter and health-check credentials, with `app_id`, account and `app_secret` reported separately
+- **Discover Rows**: Choose which editorial rows appear on the home page, and in what order
 - **Qobuz Credential Health**: Enter Qobuz credentials in Settings and test them with one click — an expired auth token and a rotated app secret are reported separately, so you know which one to replace
 - **Password-Gated Settings**: Set `NAVIDRUMS_ADMIN_PASSWORD` to require a password before Settings can be viewed or changed
 - **Download Notifications**: Posts to a Discord webhook or Apprise endpoint when a download finishes, fails or is cancelled — once per album rather than once per track
@@ -105,9 +106,7 @@ Rate limiting is still applied as a second layer of protection.
 
 - **Docker & Docker Compose** (for Docker installation only)
 - **Go 1.22+** (for building from source)
-- **A Monochrome API instance** — covers metadata, downloads and streaming. Fresh installs are pre-configured with `https://lol.samidy.workers.dev`; add your own in Settings
-- **A HiFi (Tidal) API proxy** (optional alternative for metadata browsing, e.g., `http://127.0.0.1:8000`)
-- **A Qobuz API proxy** (optional alternative for downloads/streaming, e.g., `https://qobuz.kennyy.com.br/api`)
+- **A paid Qobuz subscription**, plus the `app_id` and `app_secret` from the Qobuz web player bundle — see [QOBUZ_API.md](QOBUZ_API.md). A free account cannot stream and is reported as ineligible
 - **ffmpeg** (optional, only needed for MP4/M4A tagging - commonly required for hi-res downloads)
 
 ## Configuration
@@ -120,7 +119,6 @@ Environment variables:
 | `DB_PATH` | `navidrums.db` | SQLite database file path |
 | `DOWNLOADS_DIR` | `~/Downloads/navidrums` | Output directory for downloaded music |
 | `SUBDIR_TEMPLATE` | `{{.AlbumArtist}}/{{.OriginalYear}} - {{.Album}}/{{.Disc}}-{{.Track}} {{.Title}}` | Go template for file organization |
-| `PROVIDER_URL` | `http://127.0.0.1:8000` | Default HiFi (Tidal) API URL for metadata browsing (additional providers managed via Settings UI) |
 | `QUALITY` | `LOSSLESS` | Download audio quality (`LOSSLESS`, `HI_RES_LOSSLESS`, `HIGH`, `LOW`) |
 | `PLAY_QUALITY` | `HIGH` | Streaming playback quality (`LOSSLESS`, `HI_RES_LOSSLESS`, `HIGH`, `LOW`) |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
@@ -150,11 +148,9 @@ Environment variables:
 
 ffmpeg and ffprobe are automatically detected most of the times, but you can override them with the above variables if needed.
 
-**Previews instead of full tracks**: the legacy HiFi/Tidal `/track/` route often returns 30-second previews, especially at HI_RES_LOSSLESS quality. Monochrome fixed this by moving playback to `/trackManifests/`, and Navidrums now reports a preview as a failure rather than saving a 30-second clip — so the next configured instance gets a chance at the full track. What an instance can serve still depends on the accounts behind it:
-- **Metadata (search/browse)**: any Monochrome or HiFi instance works well
-- **Download / Streaming**: Monochrome instances serve full-length audio; add several as fallbacks, or fall back to Qobuz
+**Credentials go stale**: `app_id` and `app_secret` identify the Qobuz *web player*, not you, and Qobuz rotates them. When downloads start failing with a 400, refresh them from the bundle. Settings → Qobuz status reports `app_id`, account and `app_secret` separately, because they fail for different reasons.
 
-See [MONOCHROME_API.md](MONOCHROME_API.md) for the API details.
+See [QOBUZ_API.md](QOBUZ_API.md) for the API details.
 
 **Template Variables:**
 
@@ -174,9 +170,6 @@ The file extension (`.flac`, `.mp3`, or `.mp4`) is appended automatically.
 ```
 
 **Note:** Invalid filesystem characters (`<>:"/\|?*`) are automatically sanitized from paths.
-
-Monochrome: https://github.com/monochrome-music/monochrome
-HiFi API: https://github.com/binimum/hifi-api
 
 ## Installation
 
@@ -218,7 +211,10 @@ HiFi API: https://github.com/binimum/hifi-api
    Environment="PORT=8080"
    Environment="DB_PATH=/home/YOUR_USERNAME/navidrums/navidrums.db"
    Environment="DOWNLOADS_DIR=/home/YOUR_USERNAME/Music"
-   Environment="PROVIDER_URL=http://127.0.0.1:8000"
+   Environment="QOBUZ_APP_ID=your-app-id"
+   Environment="QOBUZ_APP_SECRET=your-app-secret"
+   Environment="QOBUZ_EMAIL=you@example.com"
+   Environment="QOBUZ_PASSWORD=your-qobuz-password"
    Environment="QUALITY=LOSSLESS"
    Environment="NAVIDRUMS_USERNAME=navidrums"
    Environment="NAVIDRUMS_PASSWORD=password"
@@ -259,7 +255,7 @@ HiFi API: https://github.com/binimum/hifi-api
 
 1. Start the server:
    ```bash
-   NAVIDRUMS_PASSWORD=admin PROVIDER_URL=https://your-hifi-url.com ./navidrums
+   NAVIDRUMS_PASSWORD=admin QOBUZ_APP_ID=... QOBUZ_APP_SECRET=... QOBUZ_EMAIL=... QOBUZ_PASSWORD=... ./navidrums
    ```
 2. Open browser at `http://localhost:8080`.
 3. Search for music and click download.
@@ -284,7 +280,10 @@ No clone needed. Just run the container directly:
      -u 1000:1000 \
      -v ~/navidrums/data:/data \
      -v ~/Music:/music \
-     -e PROVIDER_URL=https://your-hifi-api.com \
+     -e QOBUZ_APP_ID=your-app-id \
+     -e QOBUZ_APP_SECRET=your-app-secret \
+     -e QOBUZ_EMAIL=you@example.com \
+     -e QOBUZ_PASSWORD=your-qobuz-password \
      -e NAVIDRUMS_PASSWORD=your-secure-password \
      --restart unless-stopped \
      ghcr.io/cesargomez89/navidrums:latest
@@ -310,7 +309,10 @@ No clone needed. Just run the container directly:
    ```
    Edit `.env` and set at least:
    ```
-   PROVIDER_URL=https://your-hifi-api.com
+   QOBUZ_APP_ID=your-app-id
+   QOBUZ_APP_SECRET=your-app-secret
+   QOBUZ_EMAIL=you@example.com
+   QOBUZ_PASSWORD=your-qobuz-password
    NAVIDRUMS_PASSWORD=your-secure-password
    ```
 
@@ -329,7 +331,8 @@ See the [Configuration](#configuration) section for all available options. The m
 
 | Variable | Description |
 |----------|-------------|
-| `PROVIDER_URL` | Your Hifi API URL (required) |
+| `QOBUZ_APP_ID` / `QOBUZ_APP_SECRET` | From the Qobuz web player bundle (required) |
+| `QOBUZ_EMAIL` / `QOBUZ_PASSWORD` | Your Qobuz account, or `QOBUZ_AUTH_TOKEN` instead (required) |
 | `NAVIDRUMS_PASSWORD` | Web interface password (empty disables auth) |
 | `DOWNLOADS_DIR` | Container path `/music` (mounted volume) |
 | `DB_PATH` | Container path `/data/navidrums.db` (mounted volume) |
@@ -410,16 +413,14 @@ Navidrums follows a clean layered architecture with clear separation of concerns
 - **HTTP Handlers**: Request parsing and HTML rendering only
 - **Application Services**: Business logic and workflow orchestration  
 - **Repository**: Database persistence and queries
-- **Providers**: External API adapters (HiFi/Tidal, Qobuz) with multi-provider manager, per-type fallback, and caching decorator
+- **Providers**: Qobuz API adapter behind a caching decorator
 - **Storage**: Filesystem operations and path management
 - **Workers**: Background job processing with concurrency control
 
-### Multi-Provider Design
-- **ProviderManager**: Central orchestrator with three independent provider chains — metadata, download, streaming
-- **FallbackProvider**: Tries multiple URLs of the same type in order until one succeeds
-- **CachedProvider**: Decorator wrapping each chain with response caching
-- **Per-Operation Selection**: Settings store which provider type (HiFi or Qobuz) to use per operation. Defaults to HiFi
-- **No Cross-Type Fallback**: Provider choice is per-operation, not automatic fallback — configure in Settings
+### Catalog Design
+- **ProviderManager**: Owns the single Qobuz provider, rebuilding it when credentials change so Settings edits take effect without a restart
+- **CachedProvider**: Decorator adding response caching, with longer TTLs for browse data that rarely changes
+- **Provider interface**: One implementation, kept as the seam tests substitute for
 
 ### Key Design Principles
 - No downloads in HTTP handlers

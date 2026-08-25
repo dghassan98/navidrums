@@ -1,0 +1,224 @@
+{
+  "albums": {
+    "total": 213,
+    "limit": 5,
+    "offset": 0,
+    "items": [
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/9m/nn/deh8w5obwnn9m_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/9m/nn/deh8w5obwnn9m_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/9m/nn/deh8w5obwnn9m_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "LOTTE",
+          "id": 581920,
+          "albums_count": 145,
+          "slug": "lotte",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 581920,
+            "name": "LOTTE",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0196874296073",
+        "released_at": 1787263200,
+        "label": {
+          "name": "Epic Local",
+          "id": 1246569,
+          "albums_count": 822,
+          "supplier_id": 23,
+          "slug": "epic-local"
+        },
+        "title": "Lotte",
+        "qobuz_id": 409685510,
+        "version": null,
+        "url": "/at-de/album/lotte-lotte/deh8w5obwnn9m",
+        "slug": "lotte-lotte",
+        "duration": 2494,
+        "parental_warning": false,
+        "popularity": 0,
+        "tracks_count": 12,
+        "genre": {
+          "path": [
+            112,
+            117
+          ],
+          "color": "#0070ef",
+          "name": "Pop",
+          "id": 117,
+          "slug": "pop"
+        },
+        "maximum_channel_count": 2,
+        "id": "deh8w5obwnn9m",
+        "maximum_sampling_rate": 44.1,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787263200,
+        "streamable_at": 1787176800,
+        "hires": true,
+        "hires_streamable": true
+      },
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/0r/66/w2jumoir4660r_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/0r/66/w2jumoir4660r_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/0r/66/w2jumoir4660r_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Brandon Flowers",
+          "id": 145567,
+          "albums_count": 93,
+          "slug": "brandon-flowers",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 145567,
+            "name": "Brandon Flowers",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0881061043447",
+        "released_at": 1787263200,
+        "label": {
+          "name": "Brandon Flowers P&D/ Island",
+          "id": 10686921,
+          "albums_count": 8,
+          "supplier_id": 1,
+          "slug": "brandon-flowers-pd-island"
+        },
+        "title": "THRASHER",
+        "qobuz_id": 443756848,
+        "version": null,
+        "url": "/at-de/album/thrasher-brandon-flowers/w2jumoir4660r",
+        "slug": "thrasher-brandon-flowers",
+        "duration": 2562,
+        "parental_warning": false,
+        "popularity": 0,
+        "tracks_count": 10,
+        "genre": {
+          "path": [
+            2
+          ],
+          "color": "#0070ef",
+          "name": "Blues/Country/Folk",
+          "id": 2,
+          "slug": "blues-country-folk"
+        },
+        "maximum_channel_count": 2,
+        "id": "w2jumoir4660r",
+        "maximum_sampling_rate": 48,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787263200,
+        "streamable_at": 1787263200,
+        "hires": true,
+        "hires_streamable": true
+      },
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/ve/dj/vafgxaiq1djve_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/ve/dj/vafgxaiq1djve_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/ve/dj/vafgxaiq1djve_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Sam Smith",
+          "id": 914480,
+          "albums_count": 699,
+          "slug": "sam-smith",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 914480,
+            "name": "Sam Smith",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0199957589666",
+        "released_at": 1787263200,
+        "label": {
+          "name": "PLG - Capitol",
+          "id": 7084869,
+          "albums_count": 466,
+          "supplier_id": 1,
+          "slug": "plg-capitol"
+        },
+        "title": "Hazel Eyes",
+        "qobuz_id": 445382936,
+        "version": null,
+        "url": "/at-de/album/hazel-eyes-sam-smith/vafgxaiq1djve",
+        "slug": "hazel-eyes-sam-smith",
+        "duration": 2733,
+        "parental_warning": true,
+        "popularity": 0,
+        "tracks_count": 12,
+        "genre": {
+          "path": [
+            112,
+            117
+          ],
+          "color": "#0070ef",
+          "name": "Pop",
+          "id": 117,
+          "slug": "pop"
+        },
+        "maximum_channel_count": 2,
+        "id": "vafgxaiq1djve",
+        "maximum_sampling_rate": 96,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787263200,
+        "streamable_at": 1787263200,
+        "hires": true,
+        "hires_streamable": true
+      }
+    ]
+  }
+}

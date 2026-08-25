@@ -1,0 +1,235 @@
+{
+  "albums": {
+    "total": 103,
+    "limit": 5,
+    "offset": 0,
+    "items": [
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/tu/s7/h5a05vgcis7tu_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/tu/s7/h5a05vgcis7tu_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/tu/s7/h5a05vgcis7tu_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Linda May Han Oh",
+          "id": 3647865,
+          "albums_count": 25,
+          "slug": "lindamayhanoh-10003647865",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 3647865,
+            "name": "Linda May Han Oh",
+            "roles": [
+              "main-artist"
+            ]
+          },
+          {
+            "id": 2308433,
+            "name": "Melissa Aldana",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0644216206582",
+        "released_at": 1787263200,
+        "label": {
+          "name": "Biophilia Records",
+          "id": 1496208,
+          "albums_count": 71,
+          "supplier_id": 17,
+          "slug": "biophilia-records-1"
+        },
+        "title": "Beneath Lifted Skies",
+        "qobuz_id": 427154840,
+        "version": null,
+        "url": "/at-de/album/beneath-lifted-skies-linda-may-han-oh-melissa-aldana/h5a05vgcis7tu",
+        "slug": "beneath-lifted-skies-linda-may-han-oh-melissa-aldana",
+        "duration": 3253,
+        "parental_warning": false,
+        "popularity": 0,
+        "tracks_count": 15,
+        "genre": {
+          "path": [
+            80
+          ],
+          "color": "#0070ef",
+          "name": "Jazz",
+          "id": 80,
+          "slug": "jazz"
+        },
+        "maximum_channel_count": 2,
+        "id": "h5a05vgcis7tu",
+        "maximum_sampling_rate": 96,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787349600,
+        "streamable_at": 1787349600,
+        "hires": true,
+        "hires_streamable": true
+      },
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/d3/92/o5ixjollm92d3_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/d3/92/o5ixjollm92d3_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/d3/92/o5ixjollm92d3_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Henry Threadgill",
+          "id": 673560,
+          "albums_count": 61,
+          "slug": "henry-threadgill",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 673560,
+            "name": "Henry Threadgill",
+            "roles": [
+              "main-artist"
+            ]
+          },
+          {
+            "id": 196615,
+            "name": "Vijay Iyer",
+            "roles": [
+              "main-artist"
+            ]
+          },
+          {
+            "id": 630298,
+            "name": "Dafnis Prieto",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0075597892475",
+        "released_at": 1787263200,
+        "label": {
+          "name": "Nonesuch",
+          "id": 7418,
+          "albums_count": 1674,
+          "supplier_id": 5,
+          "slug": "nonesuch"
+        },
+        "title": "Fifteen",
+        "qobuz_id": 426974906,
+        "version": null,
+        "url": "/at-de/album/fifteen-henry-threadgill-vijay-iyer-dafnis-prieto/o5ixjollm92d3",
+        "slug": "fifteen-henry-threadgill-vijay-iyer-dafnis-prieto",
+        "duration": 2861,
+        "parental_warning": false,
+        "popularity": 0,
+        "tracks_count": 8,
+        "genre": {
+          "path": [
+            80
+          ],
+          "color": "#0070ef",
+          "name": "Jazz",
+          "id": 80,
+          "slug": "jazz"
+        },
+        "maximum_channel_count": 2,
+        "id": "o5ixjollm92d3",
+        "maximum_sampling_rate": 96,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787004000,
+        "streamable_at": 1787004000,
+        "hires": true,
+        "hires_streamable": true
+      },
+      {
+        "maximum_bit_depth": 16,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/ie/kx/swuj5kvljkxie_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/ie/kx/swuj5kvljkxie_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/ie/kx/swuj5kvljkxie_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Various Artists",
+          "id": 145383,
+          "albums_count": 1560857,
+          "slug": "various-artists",
+          "picture": null
+        },
+        "artists": [],
+        "upc": "0881061153122",
+        "released_at": 1787263200,
+        "label": {
+          "name": "Verve",
+          "id": 1157,
+          "albums_count": 1776,
+          "supplier_id": 1,
+          "slug": "verve"
+        },
+        "title": "Verve Records: The Sound of America",
+        "qobuz_id": 433082747,
+        "version": null,
+        "url": "/at-de/album/verve-records-the-sound-of-america-various-artists/swuj5kvljkxie",
+        "slug": "verve-records-the-sound-of-america-various-artists",
+        "duration": 9535,
+        "parental_warning": false,
+        "popularity": 0,
+        "tracks_count": 35,
+        "genre": {
+          "path": [
+            80
+          ],
+          "color": "#0070ef",
+          "name": "Jazz",
+          "id": 80,
+          "slug": "jazz"
+        },
+        "maximum_channel_count": 2,
+        "id": "swuj5kvljkxie",
+        "maximum_sampling_rate": 44.1,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787436000,
+        "streamable_at": 1787436000,
+        "hires": false,
+        "hires_streamable": false
+      }
+    ]
+  }
+}

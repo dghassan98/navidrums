@@ -1,0 +1,5 @@
+{
+  "status": "error",
+  "code": 400,
+  "message": "Invalid argument: type (accepted values are most-streamed, best-sellers, new-releases, press-awards, editor-picks, most-featured, harmonia-mundi, universal-classic, universal-jazz, universal-jeunesse, universal-chanson, new-releases-full, recent-releases, ideal-discography, qobuzissims)"
+}

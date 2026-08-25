@@ -38,11 +38,7 @@ All routes are server-rendered HTML endpoints using HTMX for partial updates.
 | POST | `/htmx/track/{id}/save` | Save track metadata |
 | POST | `/htmx/track/{id}/sync` | Re-tag file with existing metadata |
 | POST | `/htmx/track/{id}/enrich` | Enrich track from MusicBrainz |
-| POST | `/htmx/track/{id}/enrich-hifi` | Enrich track from Hi-Fi + MusicBrainz |
-| GET | `/htmx/providers` | Get provider configuration |
-| POST | `/htmx/provider/set?url={url}` | Set active provider |
-| POST | `/htmx/provider/add?name={name}&url={url}` | Add custom provider |
-| POST | `/htmx/provider/remove?url={url}` | Remove custom provider |
+| POST | `/htmx/track/{id}/enrich-provider` | Enrich track from Qobuz + MusicBrainz |
 | GET | `/htmx/genre-map` | Get genre map configuration (JSON) |
 | POST | `/htmx/genre-map` | Save custom genre map |
 | POST | `/htmx/genre-map/reset` | Reset genre map to default |

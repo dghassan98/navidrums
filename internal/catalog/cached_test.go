@@ -12,7 +12,7 @@ import (
 func TestCachedProvider_Search(t *testing.T) {
 	inner := &mockProvider{}
 	cache := &mockCache{data: make(map[string][]byte)}
-	cp := NewCachedProvider(inner, cache, time.Hour, ProviderTypeHifi)
+	cp := NewCachedProvider(inner, cache, time.Hour)
 
 	ctx := context.Background()
 
@@ -51,7 +51,7 @@ func TestCachedProvider_Search(t *testing.T) {
 func TestCachedProvider_Error(t *testing.T) {
 	inner := &mockProvider{}
 	cache := &mockCache{err: errors.New("cache error")}
-	cp := NewCachedProvider(inner, cache, time.Hour, ProviderTypeHifi)
+	cp := NewCachedProvider(inner, cache, time.Hour)
 
 	_, err := cp.Search(context.Background(), "q", "a")
 	if err == nil {
@@ -108,7 +108,7 @@ func (m *mockProvider) GetRecommendations(ctx context.Context, id string) ([]dom
 func TestCachedProvider_AllMethods(t *testing.T) {
 	inner := &mockProvider{}
 	cache := &mockCache{data: make(map[string][]byte)}
-	cp := NewCachedProvider(inner, cache, time.Hour, ProviderTypeHifi)
+	cp := NewCachedProvider(inner, cache, time.Hour)
 	ctx := context.Background()
 
 	tests := []struct {

@@ -28,7 +28,10 @@
             {{if .Album.Label}}
             <div class="data-item">
                 <span class="data-label">Label</span>
-                <span class="data-value">{{.Album.Label}}</span>
+                <span class="data-value">
+                    {{if .Album.LabelID}}<a href="/label/{{.Album.LabelID}}">{{.Album.Label}}</a>
+                    {{else}}{{.Album.Label}}{{end}}
+                </span>
             </div>
             {{end}}
             {{if .Album.ReleaseDate}}
@@ -46,7 +49,10 @@
             {{if .Album.Genre}}
             <div class="data-item">
                 <span class="data-label">Genre</span>
-                <span class="data-value">{{.Album.Genre}}</span>
+                <span class="data-value">
+                    {{if .Album.GenreID}}<a href="/genre/{{.Album.GenreID}}">{{.Album.Genre}}</a>
+                    {{else}}{{.Album.Genre}}{{end}}
+                </span>
             </div>
             {{end}}
         </div>

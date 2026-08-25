@@ -958,6 +958,11 @@ button:active {
 .card-sub {
     font-size: 0.8rem;
     color: var(--text-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 
@@ -2027,4 +2032,72 @@ code {
     color: var(--text-dim);
     min-width: 34px;
     text-align: right;
+}
+
+/* Browse: an album Navidrums already downloaded. The cover is dimmed so a
+   scan of a Discover row separates new material from old at a glance, while
+   the download button stays usable for a deliberate re-fetch. */
+.card--owned img {
+    opacity: 0.45;
+}
+
+.card--owned:hover img {
+    opacity: 0.75;
+}
+
+.owned-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent, #2f855a);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Rows scroll sideways rather than wrapping, so a row stays one row. The
+   grid default (400px columns) would reflow a row into a wall of cards. */
+.discover-row .list-grid {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+}
+
+.discover-row .list-grid > .card {
+    flex: 0 0 200px;
+    scroll-snap-align: start;
+}
+
+/* Cards in a row are only as tall as the shortest useful card: the cover, a
+   title and a two line subtitle. Without this a single long editorial
+   description sets the height for the whole row. */
+.discover-row .list-grid > .card .card-sub {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+
+.discover-row .list-grid > .card img {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    width: 100%;
+}
+
+/* Release year on a card. Small and dim: it is a sorting aid, not a headline. */
+.card-meta {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    opacity: 0.8;
+    letter-spacing: 0.3px;
 }

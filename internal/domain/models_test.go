@@ -102,7 +102,7 @@ func TestJob_IsContainer(t *testing.T) {
 		{JobTypeDiscography, true},
 		{JobTypeSyncFile, false},
 		{JobTypeSyncMusicBrainz, false},
-		{JobTypeSyncHiFi, false},
+		{JobTypeSyncProvider, false},
 	}
 
 	for _, tt := range tests {

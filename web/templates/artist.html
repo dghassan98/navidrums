@@ -7,13 +7,17 @@
         <h2 class="m-0">{{.Artist.Name}}</h2>
         <div class="text-sm text-dim mt-2 flex gap-2 items-center flex-wrap">
             <span>{{len .Artist.Albums}} albums</span>
+            {{if .Artist.TopTracks}}
             <span>&bull;</span>
             <span>{{len .Artist.TopTracks}} top tracks</span>
+            {{end}}
         </div>
         <div class="toolbar-row mt-4">
+            {{if .Artist.TopTracks}}
             <button class="btn btn-primary" onclick="queueDownload(event, 'artist', '{{.Artist.ID}}', this)" title="Download Top Tracks">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download Top Tracks</button>
+            {{end}}
             <button class="btn btn-secondary" onclick="queueDownload(event, 'discography', '{{.Artist.ID}}', this)" title="Download Discography">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download Discography</button>
@@ -25,17 +29,31 @@
 
 <div id="similar-artists-container" class="mb-6"></div>
 
+{{if .Artist.TopTracks}}
 <h2>Top Tracks</h2>
 <div class="mb-6 list-grid">
     {{range .Artist.TopTracks}}
     {{template "track_card.html" .}}
     {{end}}
 </div>
+{{end}}
 
-<h2>Albums</h2>
+<div class="flex gap-4 items-center flex-wrap mt-6 mb-4">
+    <h2 class="m-0">Albums</h2>
+    <div class="toolbar-row">
+        <a class="btn btn-sm {{if eq .Sort "newest"}}btn-primary{{else}}btn-outline{{end}}"
+            href="/artist/{{.Artist.ID}}?sort=newest">Newest first</a>
+        <a class="btn btn-sm {{if eq .Sort "oldest"}}btn-primary{{else}}btn-outline{{end}}"
+            href="/artist/{{.Artist.ID}}?sort=oldest">Oldest first</a>
+    </div>
+</div>
+{{if .Artist.Albums}}
 <div class="grid">
     {{range .Artist.Albums}}
     {{template "album_card.html" .}}
     {{end}}
 </div>
+{{else}}
+<p class="text-muted">Qobuz lists no albums for this artist.</p>
+{{end}}
 {{end}}

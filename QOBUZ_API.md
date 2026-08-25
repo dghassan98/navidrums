@@ -1,54 +1,18 @@
 ## Qobuz API
 
-Two Qobuz provider types exist: **`qobuz`**, which calls a shared third-party proxy, and
-**`qobuz-direct`**, which calls the official Qobuz API with your own subscription.
+Qobuz is the only catalog provider. Navidrums calls the official API with your own
+subscription.
 
 ---
 
-## Qobuz Proxy (`qobuz`)
+## Credentials and endpoints
 
-Base: `https://qobuz.kennyy.com.br/api`
-
-### Endpoints
-
-**Search** — `GET /get-music?q={query}&offset=0` — returns albums, tracks, artists, playlists, stories, most_popular (each: total + items).
-
-**Album** — `GET /get-album?album_id={uuid}` — metadata + embedded tracks with audio_info, performers, isrc, maximum_bit_depth, hires.
-
-**Artist** — `GET /get-artist?artist_id={int}` — metadata, albums (grouped by type), toptracks, similar_artists, playlists.
-
-**Track** — `GET /get-track?isrc={int}` — **param is track ID**, not ISRC code. Returns track + embedded album.
-
-**Download** — `GET /download-music?track_id={int}&quality={int}` — returns signed Akamai URL (time-limited). Quality: `6` = LOSSLESS.
-
-### Data Types
-
-**Album**: id (UUID), title, artist, artists[], label, upc, genre, image, release_date_original, tracks_count, tracks.items[], copyright, parental_warning.
-
-**Track**: id, title, track_number, media_number (disc), duration, isrc, performers, composer, performer, audio_info, copyright, parental_warning, version.
-
-**Audio**: maximum_bit_depth, maximum_sampling_rate, hires, hires_streamable, audio_info.replaygain_*.
-
-### Design Notes
-
-- Album IDs are UUIDs (strings), not integers
-- Tracks embedded in album response
-- `/get-track` param `isrc` is misnamed — takes track ID
-- Download returns time-limited signed CDN URL
-- Search returns all types at once
-- Cover art: `static.qobuz.com` at `_50.jpg`, `_230.jpg`, `_600.jpg`
-
-See `api-examples/qobuz-api/` for JSON examples.
----
-
-## Qobuz Direct (your own subscription)
-
-The provider type above talks to a third-party proxy. `qobuz-direct` instead calls the official Qobuz API
-as **you**, using your own paid subscription.
+Navidrums calls the official Qobuz API as **you**, using your own paid subscription.
 
 ### Base URL
 
-`https://www.qobuz.com/api.json/0.2` (seeded automatically; not usually changed)
+`https://www.qobuz.com/api.json/0.2` — the default. Override with `qobuz_base_url` in Settings;
+almost never needed.
 
 ### Credentials
 
@@ -74,12 +38,29 @@ All requests carry `app_id` (query and `X-App-Id`) and, after login, `X-User-Aut
   A `credential.parameters` of `null` means a free account, which cannot stream; Navidrums reports this as
   `ErrQobuzIneligible` rather than failing obscurely later.
 - **Search** — `GET /{album,track,artist,playlist}/search?query=&limit=` — there is no combined search.
-- **Album** — `GET /album/get?album_id=` — same object the proxy wraps, so the DTOs are shared.
+- **Album** — `GET /album/get?album_id=`
 - **Track** — `GET /track/get?track_id=`
-- **Artist** — `GET /artist/get?artist_id=&extra=albums` — note `name` is a plain string here, unlike the
-  `artist/page` shape the proxy returns.
+- **Artist** — `GET /artist/get?artist_id=&extra=albums`, and `artist/page` for the richer shape
 - **Playlist** — `GET /playlist/get?playlist_id=&extra=tracks`
 - **File URL** — `GET /track/getFileUrl?request_ts=&request_sig=&track_id=&format_id=&intent=stream`
+
+### Browse endpoints
+
+- **Featured** — `GET /album/getFeatured?type=&genre_id=&limit=&offset=`. An unknown `type` returns a 400
+  whose message enumerates the valid set, which is where this list came from:
+  `most-streamed`, `best-sellers`, `new-releases`, `press-awards`, `editor-picks`, `most-featured`,
+  `harmonia-mundi`, `universal-classic`, `universal-jazz`, `universal-jeunesse`, `universal-chanson`,
+  `new-releases-full`, `recent-releases`, `ideal-discography`, `qobuzissims`.
+- **Featured playlists** — `GET /playlist/getFeatured?type=editor-picks&genre_ids=&limit=&offset=`. Note
+  the parameter is `genre_ids`, plural, unlike `album/getFeatured`. Playlist objects here differ from the
+  ones search returns: the title is `name`, and images arrive as parallel arrays (`images`, `images150`,
+  `images300`) rather than an object.
+- **Genres** — `GET /genre/list` returns the 13 top level genres only. `genre/get?extra=subgenres`
+  **ignores the extra** and returns the same flat object, so children come from
+  `GET /genre/list?parent_id={id}` — one call per top level genre, which is why the tree is cached for 24
+  hours.
+- **Label** — `GET /label/get?label_id=&extra=albums&limit=&offset=`. There is no sort parameter, so
+  ordering can only be applied to the page that comes back.
 
 ### Request signing
 
@@ -118,8 +99,6 @@ matters because they fail for different reasons. Two probes are used:
 ### Design Notes
 
 - The auth token is cached in memory and refreshed automatically on a 401.
-- Metadata DTOs are shared with the proxy provider — the proxy simply wraps these objects in
-  `{success, data}`.
 - ISRC lookups go through `track/search` and are only trusted on an exact ISRC match.
 - Using the web player's `app_id`/`app_secret` this way is outside Qobuz's terms of service, even with a
   paid account.

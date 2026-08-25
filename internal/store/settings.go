@@ -37,11 +37,6 @@ func (r *SettingsRepo) Delete(key string) error {
 }
 
 const (
-	SettingActiveProvider          = "active_provider"
-	SettingActiveMetadataProvider  = "active_metadata_provider"
-	SettingActiveDownloadProvider  = "active_download_provider"
-	SettingActiveStreamingProvider = "active_streaming_provider"
-	SettingCustomProviders         = "custom_providers"
 	SettingGenreMap                = "genre_map"
 	SettingGenreSeparator          = "genre_separator"
 	SettingTheme                   = "theme"
@@ -54,5 +49,7 @@ const (
 	SettingQobuzAuthToken          = "qobuz_auth_token"
 	SettingQobuzEmail              = "qobuz_email"
 	SettingQobuzPasswordMD5        = "qobuz_password_md5"
+	SettingQobuzBaseURL            = "qobuz_base_url"
 	SettingNotifyURL               = "notify_url"
+	SettingDiscoverRows            = "discover_rows"
 )

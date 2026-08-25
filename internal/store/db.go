@@ -3,13 +3,12 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
-
-	"github.com/cesargomez89/navidrums/internal/constants"
 )
 
 type migration struct {
@@ -458,7 +457,7 @@ var migrations = []migration{
 			if seeded == 0 {
 				_, err = tx.Exec(
 					`INSERT OR IGNORE INTO providers (type, url, name, position) VALUES ('monochrome', ?, ?, 0)`,
-					constants.MonochromeDefaultURL, constants.MonochromeDefaultName,
+					"https://lol.samidy.workers.dev", "Monochrome (default)",
 				)
 				if err != nil {
 					return err
@@ -470,7 +469,7 @@ var migrations = []migration{
 			// select it automatically.
 			_, err = tx.Exec(
 				`INSERT OR IGNORE INTO providers (type, url, name, position) VALUES ('qobuz-direct', ?, ?, 0)`,
-				constants.QobuzDirectDefaultURL, constants.QobuzDirectDefaultName,
+				"https://www.qobuz.com/api.json/0.2", "Qobuz (my subscription)",
 			)
 			if err != nil {
 				return err
@@ -483,9 +482,9 @@ var migrations = []migration{
 			}
 
 			for _, key := range []string{
-				SettingActiveMetadataProvider,
-				SettingActiveDownloadProvider,
-				SettingActiveStreamingProvider,
+				"active_metadata_provider",
+				"active_download_provider",
+				"active_streaming_provider",
 			} {
 				_, err = tx.Exec(
 					`INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'monochrome')`, key,
@@ -496,6 +495,49 @@ var migrations = []migration{
 			}
 
 			return nil
+		},
+	},
+	{
+		version:     17,
+		description: "Remove multi-provider support; qobuz-direct only",
+		up: func(tx *sqlx.Tx) error {
+			// Carry a custom qobuz-direct endpoint over to the new setting
+			// before the table goes, so it is not silently lost. Literals,
+			// not constants: a migration must not track a value the
+			// application is free to change later.
+			var url string
+			err := tx.QueryRow(
+				`SELECT url FROM providers WHERE type = 'qobuz-direct'
+				 ORDER BY position LIMIT 1`).Scan(&url)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) &&
+				!strings.Contains(err.Error(), "no such table") {
+				return err
+			}
+			if err == nil && url != "" && url != "https://www.qobuz.com/api.json/0.2" {
+				_, saveErr := tx.Exec(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+					SettingQobuzBaseURL, url)
+				if saveErr != nil {
+					return saveErr
+				}
+			}
+
+			if _, dropErr := tx.Exec(`DROP TABLE IF EXISTS providers`); dropErr != nil {
+				return dropErr
+			}
+
+			_, cleanErr := tx.Exec(
+				`DELETE FROM settings WHERE key IN (?, ?, ?, ?, ?)`,
+				"active_provider", "active_metadata_provider",
+				"active_download_provider", "active_streaming_provider",
+				"custom_providers")
+			if cleanErr != nil {
+				return cleanErr
+			}
+
+			_, err = tx.Exec(
+				`UPDATE jobs SET type = 'sync_provider' WHERE type = 'sync_hifi'`)
+			return err
 		},
 	},
 }

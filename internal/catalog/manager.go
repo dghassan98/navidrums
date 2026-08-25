@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cesargomez89/navidrums/internal/constants"
 	"github.com/cesargomez89/navidrums/internal/store"
 )
 
@@ -15,30 +16,26 @@ type Logger interface {
 	Error(msg string, keyValues ...any)
 }
 
+// ProviderManager owns the single Qobuz provider and its response cache.
+// Credentials can change at runtime through Settings, so the built provider is
+// discarded whenever they do and rebuilt on next use.
 type ProviderManager struct {
 	logger     Logger
-	providers  *store.ProvidersRepo
 	settings   *store.SettingsRepo
 	cacheTTL   time.Duration
 	db         *store.DB
 	qobuzCreds QobuzCredentials
 
-	chains map[ProviderType]*CachedProvider
-	mu     sync.RWMutex
+	provider *CachedProvider
+	mu       sync.RWMutex
 }
 
 func NewProviderManager(db *store.DB, settings *store.SettingsRepo, cacheTTL time.Duration, logger Logger) *ProviderManager {
-	var providersRepo *store.ProvidersRepo
-	if db != nil {
-		providersRepo = store.NewProvidersRepo(db)
-	}
-
 	return &ProviderManager{
-		logger:    logger,
-		providers: providersRepo,
-		settings:  settings,
-		cacheTTL:  cacheTTL,
-		db:        db,
+		logger:   logger,
+		settings: settings,
+		cacheTTL: cacheTTL,
+		db:       db,
 	}
 }
 
@@ -49,7 +46,7 @@ func (m *ProviderManager) SetQobuzCredentials(creds QobuzCredentials) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.qobuzCreds = creds
-	m.chains = nil
+	m.provider = nil
 }
 
 // QobuzCredentials returns the effective credentials: values stored in
@@ -85,122 +82,71 @@ func (m *ProviderManager) CheckQobuzCredentials(ctx context.Context) *QobuzStatu
 	return provider.CheckCredentials(ctx)
 }
 
-// qobuzBaseURL returns the first configured qobuz-direct endpoint, or "" to let
-// the provider fall back to the official API.
+// qobuzBaseURL returns the configured endpoint, or the official API when the
+// setting is unset. Only an install that migrated from a custom qobuz-direct
+// instance, or one that set it deliberately, has anything stored here.
 func (m *ProviderManager) qobuzBaseURL() string {
-	if m.providers == nil {
-		return ""
-	}
-	records, err := m.providers.ListByType(string(ProviderTypeQobuzDirect))
-	if err != nil || len(records) == 0 {
-		return ""
-	}
-	return records[0].URL
-}
-
-func (m *ProviderManager) readSetting(key string) ProviderType {
 	if m.settings == nil {
-		return DefaultProviderType
+		return constants.QobuzDirectDefaultURL
 	}
-	val, err := m.settings.Get(key)
-	if err != nil || val == "" {
-		return DefaultProviderType
+	if val, err := m.settings.Get(store.SettingQobuzBaseURL); err == nil && val != "" {
+		return val
 	}
-	if !IsValidProviderType(val) {
-		return DefaultProviderType
-	}
-	return ProviderType(val)
+	return constants.QobuzDirectDefaultURL
 }
 
-func (m *ProviderManager) buildChain(pt ProviderType) *CachedProvider {
-	fb := &FallbackProvider{manager: m, providerType: pt}
+// Provider returns the cached Qobuz provider, building it on first use.
+//
+// The provider is built *before* the write lock is taken, not inside it:
+// build reads the effective credentials, which takes the read lock, and
+// sync.RWMutex is not reentrant — doing that while holding the write lock
+// deadlocks the first catalog call the process makes. Two goroutines racing
+// here may each build one; that is cheap, and only one is kept.
+func (m *ProviderManager) Provider() Provider {
+	m.mu.RLock()
+	p := m.provider
+	m.mu.RUnlock()
+	if p != nil {
+		return p
+	}
+
+	built := m.build()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.provider == nil {
+		m.provider = built
+	}
+	return m.provider
+}
+
+func (m *ProviderManager) build() *CachedProvider {
+	qobuz := NewQobuzDirectProvider(m.qobuzBaseURL(), m.QobuzCredentials())
 	var cacheStore *storeCache
 	if m.db != nil {
 		cacheStore = &storeCache{store: m.db}
 	}
-	return NewCachedProvider(fb, cacheStore, m.cacheTTL, pt)
+	return NewCachedProvider(qobuz, cacheStore, m.cacheTTL)
 }
 
-func (m *ProviderManager) GetProvider(pt ProviderType) Provider {
-	m.mu.RLock()
-	chain := m.chains[pt]
-	m.mu.RUnlock()
-
-	if chain != nil {
-		return chain
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.chains == nil {
-		m.chains = make(map[ProviderType]*CachedProvider)
-	}
-	if m.chains[pt] == nil {
-		m.chains[pt] = m.buildChain(pt)
-	}
-	return m.chains[pt]
-}
-
-func (m *ProviderManager) GetMetadataProvider() Provider {
-	return m.GetProvider(m.readSetting(store.SettingActiveMetadataProvider))
-}
-
-func (m *ProviderManager) GetDownloadProvider() Provider {
-	primary := m.readSetting(store.SettingActiveDownloadProvider)
-	return m.getCrossProvider(primary)
-}
-
-func (m *ProviderManager) getCrossProvider(primary ProviderType) Provider {
-	chain := m.GetProvider(primary)
-
-	var fallbacks []Provider
-	for _, pt := range fallbackProviderTypes(primary) {
-		if m.hasProvidersOfType(pt) {
-			fallbacks = append(fallbacks, m.GetProvider(pt))
-		}
-	}
-
-	if len(fallbacks) == 0 {
-		return chain
-	}
-
-	return &crossProviderFallback{primary: chain, fallbacks: fallbacks}
-}
-
-func (m *ProviderManager) GetStreamingProvider() Provider {
-	primary := m.readSetting(store.SettingActiveStreamingProvider)
-	return m.getCrossProvider(primary)
-}
-
+// InvalidateAllCaches drops the built provider so the next call picks up new
+// credentials or a new base URL.
 func (m *ProviderManager) InvalidateAllCaches() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.chains = nil
+	m.provider = nil
 }
 
-type CustomProvider struct {
-	ID   int64  `json:"id,omitempty"`
-	Name string `json:"name"`
-	URL  string `json:"url"`
-	Type string `json:"type"`
+// NewProviderManagerWithProvider wraps an already-built provider. It exists so
+// handlers can be tested against a stub without a database or credentials.
+func NewProviderManagerWithProvider(p Provider) *ProviderManager {
+	return &ProviderManager{provider: NewCachedProvider(p, noopCache{}, 0)}
 }
 
-func (m *ProviderManager) GetProvidersByType(providerType string) []CustomProvider {
-	if m.providers == nil {
-		return nil
-	}
-	providers, err := m.providers.ListByType(providerType)
-	if err != nil {
-		return nil
-	}
-	result := make([]CustomProvider, len(providers))
-	for i, p := range providers {
-		result[i] = CustomProvider{
-			ID:   p.ID,
-			Name: p.Name,
-			URL:  p.URL,
-			Type: p.Type,
-		}
-	}
-	return result
-}
+// noopCache satisfies Cache without storing anything, so an injected provider
+// is called on every request and tests see exactly what they stubbed.
+type noopCache struct{}
+
+func (noopCache) GetCache(string) ([]byte, error)              { return nil, nil }
+func (noopCache) SetCache(string, []byte, time.Duration) error { return nil }
+func (noopCache) ClearCache() error                            { return nil }

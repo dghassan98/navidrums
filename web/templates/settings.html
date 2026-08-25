@@ -123,86 +123,16 @@
 </div>
 
 <div class="section">
-    <h2>QOBUZ DIRECT</h2>
-    <p class="hint">The official Qobuz API, used with <strong>your own subscription</strong>. Requires
-        <code>QOBUZ_APP_ID</code>, <code>QOBUZ_APP_SECRET</code>, <code>QOBUZ_EMAIL</code> and
-        <code>QOBUZ_PASSWORD</code> to be set in the environment &mdash; credentials are never stored in
-        the database. Downloads fail with a clear error until they are configured.</p>
-    <div id="qobuz-direct-provider-list" class="flex flex-col gap-2"></div>
-    <form class="provider-form mt-4" onsubmit="addProvider(event, 'qobuz-direct')">
-        <input type="text" id="qobuz-direct-provider-name" placeholder="Name" required>
-        <input type="url" id="qobuz-direct-provider-url" placeholder="URL" required>
-        <button type="submit" class="btn-lg btn-primary">+ Add</button>
-    </form>
-</div>
-
-<div class="section">
-    <h2>MONOCHROME Instances</h2>
-    <p class="hint">Monochrome API instances used for metadata, downloads, and streaming. Tried in order, so
-        add a few as fallbacks. Default: <code>https://lol.samidy.workers.dev</code></p>
-    <div id="monochrome-provider-list" class="flex flex-col gap-2"></div>
-    <form class="provider-form mt-4" onsubmit="addProvider(event, 'monochrome')">
-        <input type="text" id="monochrome-provider-name" placeholder="Name" required>
-        <input type="url" id="monochrome-provider-url" placeholder="URL" required>
-        <button type="submit" class="btn-lg btn-primary">+ Add</button>
-    </form>
-</div>
-
-<div class="section">
-    <h2>HIFI Providers</h2>
-    <p class="hint">HIFI API URLs used for metadata, downloads, and streaming.</p>
-    <div id="hifi-provider-list" class="flex flex-col gap-2"></div>
-    <form class="provider-form mt-4" onsubmit="addProvider(event, 'hifi')">
-        <input type="text" id="hifi-provider-name" placeholder="Name" required>
-        <input type="url" id="hifi-provider-url" placeholder="URL" required>
-        <button type="submit" class="btn-lg btn-primary">+ Add</button>
-    </form>
-</div>
-
-<div class="section">
-    <h2>QOBUZ Providers</h2>
-    <p class="hint">QOBUZ API URLs used for metadata, downloads, and streaming.</p>
-    <div id="qobuz-provider-list" class="flex flex-col gap-2"></div>
-    <form class="provider-form mt-4" onsubmit="addProvider(event, 'qobuz')">
-        <input type="text" id="qobuz-provider-name" placeholder="Name" required>
-        <input type="url" id="qobuz-provider-url" placeholder="URL" required>
-        <button type="submit" class="btn-lg btn-primary">+ Add</button>
-    </form>
-</div>
-
-<div class="section">
-    <h2>Default APIs</h2>
-    <p class="hint">Select which provider type to use for each operation.</p>
-    <div class="flex flex-col gap-3 mt-2">
-        <div class="flex gap-2 items-center">
-            <label class="w-52">Metadata (search/browse):</label>
-            <select id="default-metadata-api" class="form-select" onchange="saveDefaultAPI('active_metadata_provider', this.value)">
-                <option value="monochrome">MONOCHROME</option>
-                <option value="qobuz-direct">QOBUZ DIRECT</option>
-                <option value="hifi">HIFI</option>
-                <option value="qobuz">QOBUZ</option>
-            </select>
-        </div>
-        <div class="flex gap-2 items-center">
-            <label class="w-52">Download:</label>
-            <select id="default-download-api" class="form-select" onchange="saveDefaultAPI('active_download_provider', this.value)">
-                <option value="monochrome">MONOCHROME</option>
-                <option value="qobuz-direct">QOBUZ DIRECT</option>
-                <option value="hifi">HIFI</option>
-                <option value="qobuz">QOBUZ</option>
-            </select>
-        </div>
-        <div class="flex gap-2 items-center">
-            <label class="w-52">Streaming (playback):</label>
-            <select id="default-streaming-api" class="form-select" onchange="saveDefaultAPI('active_streaming_provider', this.value)">
-                <option value="monochrome">MONOCHROME</option>
-                <option value="qobuz-direct">QOBUZ DIRECT</option>
-                <option value="hifi">HIFI</option>
-                <option value="qobuz">QOBUZ</option>
-            </select>
-        </div>
+    <h2>Discover Rows</h2>
+    <p class="hint">Which editorial rows appear on the home page, and in what order. Drag to reorder.</p>
+    <div id="discover-rows-list" class="flex flex-col gap-2 mt-2"
+        hx-get="/htmx/discover-rows" hx-trigger="load" hx-swap="innerHTML"></div>
+    <div class="toolbar-row mt-4">
+        <button class="btn btn-primary" onclick="saveDiscoverRows()">Save</button>
+        <button class="btn btn-outline" hx-post="/htmx/discover-rows/reset"
+            hx-target="#discover-rows-list" hx-swap="innerHTML">Reset to defaults</button>
     </div>
-    <div id="default-api-status" class="mt-2"></div>
+    <div id="discover-rows-status" class="mt-2"></div>
 </div>
 
 <div class="section">
@@ -301,117 +231,41 @@
 </div>
 
 <script>
-    function loadProviders(type) {
-        fetch('/htmx/providers', { cache: 'no-store' })
-            .then(r => r.json())
-            .then(data => {
-                const providers = data[type] || [];
-                renderProviderList(type, providers);
-            });
-    }
+    // Discover rows: an ordered list of {kind, enabled}. The server owns the
+    // set of valid kinds, so the UI only ever reorders and toggles what it was
+    // given rather than inventing entries.
+    function saveDiscoverRows() {
+        const rows = Array.from(document.querySelectorAll('#discover-rows-list [data-kind]'))
+            .map(el => ({
+                kind: el.getAttribute('data-kind'),
+                enabled: el.querySelector('input[type=checkbox]').checked,
+            }));
 
-    function renderProviderList(type, providers) {
-        const containerId = type + '-provider-list';
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        if (providers.length === 0) {
-            container.innerHTML = '<p class="hint">No ' + type.toUpperCase() + ' providers configured.</p>';
-            return;
-        }
-
-        container.innerHTML = providers.map((p, i) => `
-            <div class="item item-bordered">
-                <span class="badge-env flex-shrink-0">${i + 1}</span>
-                <div class="item-body min-w-0 flex-1">
-                    <div class="item-title truncate font-medium" title="${p.name}">${p.name}</div>
-                    <div class="item-subtitle truncate text-dim" title="${p.url}"><a href="${p.url}" target="_blank" rel="noopener noreferrer" class="text-dim">${p.url}</a></div>
-                </div>
-                <div class="item-actions">
-                    <button class="btn btn-sm btn-outline" onclick="moveProvider(${p.id}, 'up', '${type}')" ${i === 0 ? 'disabled' : ''} title="Move Up">
-                        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="moveProvider(${p.id}, 'down', '${type}')" ${i === providers.length - 1 ? 'disabled' : ''} title="Move Down">
-                        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="removeProvider(${p.id}, '${type}')" title="Remove">
-                        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function moveProvider(id, direction, type) {
-        fetch('/htmx/providers?type=' + type, { cache: 'no-store' })
-            .then(r => r.json())
-            .then(data => {
-                const providers = data[type] || [];
-                const currentIdx = providers.findIndex(p => p.id === id);
-                if (currentIdx === -1) return;
-
-                const newIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
-                if (newIdx < 0 || newIdx >= providers.length) return;
-
-                const newOrder = [...providers];
-                [newOrder[currentIdx], newOrder[newIdx]] = [newOrder[newIdx], newOrder[currentIdx]];
-
-                const ids = newOrder.map(p => p.id);
-
-                fetch('/htmx/providers/reorder?type=' + type, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'ids[]=' + ids.join('&ids[]=')
-                }).then(() => loadProviders(type));
-            });
-    }
-
-    function addProvider(e, type) {
-        e.preventDefault();
-        const nameEl = document.getElementById(type + '-provider-name');
-        const urlEl = document.getElementById(type + '-provider-url');
-        const name = nameEl.value;
-        const url = urlEl.value;
-        fetch('/htmx/provider?name=' + encodeURIComponent(name) + '&url=' + encodeURIComponent(url) + '&type=' + type, { method: 'POST' })
-            .then(r => r.json())
-            .then(() => {
-                nameEl.value = '';
-                urlEl.value = '';
-                loadProviders(type);
-            });
-    }
-
-    function removeProvider(id, type) {
-        if (!confirm('Remove this provider?')) return;
-        fetch('/htmx/provider?id=' + id, { method: 'DELETE' })
-            .then(r => r.json())
-            .then(() => loadProviders(type));
-    }
-
-    function loadDefaultAPIs() {
-        fetch('/htmx/default-apis', { cache: 'no-store' })
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('default-metadata-api').value = data.active_metadata_provider || 'hifi';
-                document.getElementById('default-download-api').value = data.active_download_provider || 'hifi';
-                document.getElementById('default-streaming-api').value = data.active_streaming_provider || 'hifi';
-            });
-    }
-
-    function saveDefaultAPI(key, value) {
-        fetch('/htmx/default-apis', {
+        fetch('/htmx/discover-rows', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: key, value: value })
+            body: JSON.stringify(rows),
         })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    const statusDiv = document.getElementById('default-api-status');
-                    statusDiv.innerHTML = '<span class="badge badge-success">Saved</span>';
-                    setTimeout(() => statusDiv.innerHTML = '', 2000);
-                }
+            .then(readResult)
+            .then(msg => {
+                document.getElementById('discover-rows-status').innerHTML =
+                    '<span class="text-success">' + escapeText(msg || 'Saved.') + '</span>';
+            })
+            .catch(err => {
+                document.getElementById('discover-rows-status').innerHTML =
+                    '<span class="text-danger">' + escapeText(err.message) + '</span>';
             });
+    }
+
+    function moveDiscoverRow(kind, direction) {
+        const list = document.getElementById('discover-rows-list');
+        const el = list.querySelector('[data-kind="' + kind + '"]');
+        if (!el) return;
+        if (direction === 'up' && el.previousElementSibling) {
+            list.insertBefore(el, el.previousElementSibling);
+        } else if (direction === 'down' && el.nextElementSibling) {
+            list.insertBefore(el.nextElementSibling, el);
+        }
     }
 
     function loadGenreMap() {
@@ -881,11 +735,6 @@
 
     loadQobuzCredentials();
 
-    loadProviders('monochrome');
-    loadProviders('qobuz-direct');
-    loadProviders('hifi');
-    loadProviders('qobuz');
-    loadDefaultAPIs();
     loadGenreMap();
     loadMoodList();
     loadLanguageList();

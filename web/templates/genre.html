@@ -1,0 +1,18 @@
+{{define "content"}}
+<h1>{{if .Genre}}{{.Genre.Name}}{{else}}Genre{{end}}</h1>
+
+{{if .Children}}
+<div class="toolbar-row mb-6">
+    {{range .Children}}
+    <a class="btn btn-sm btn-outline" href="/genre/{{.ID}}">{{.Name}}</a>
+    {{end}}
+</div>
+{{end}}
+
+{{range .Rows}}
+<div class="discover-row" data-kind="{{.Kind}}"
+    hx-get="/htmx/discover/row/{{.Kind}}?genre_id={{$.GenreID}}" hx-trigger="load" hx-swap="innerHTML">
+    <p class="text-sm text-muted">Loading&hellip;</p>
+</div>
+{{end}}
+{{end}}

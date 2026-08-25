@@ -1,0 +1,12 @@
+{{define "genre_picker"}}
+<select name="genre_id" class="form-select"
+    {{if .HXTarget}}hx-get="{{.ActionURL}}" hx-target="{{.HXTarget}}"{{end}}>
+    <option value="">All genres</option>
+    {{range .Genres}}
+    <option value="{{.ID}}" {{if eq $.Selected .ID}}selected{{end}}>{{.Name}}</option>
+    {{range .Children}}
+    <option value="{{.ID}}" {{if eq $.Selected .ID}}selected{{end}}>&nbsp;&nbsp;{{.Name}}</option>
+    {{end}}
+    {{end}}
+</select>
+{{end}}

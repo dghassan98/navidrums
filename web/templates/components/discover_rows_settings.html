@@ -1,0 +1,14 @@
+{{define "discover_rows_settings"}}
+{{range .Rows}}
+<div class="flex gap-2 items-center" data-kind="{{.Kind}}">
+    <label class="flex-1 flex gap-2 items-center">
+        <input type="checkbox" {{if .Enabled}}checked{{end}}>
+        <span>{{.Title}}</span>
+    </label>
+    <button type="button" class="btn btn-sm btn-outline"
+        onclick="moveDiscoverRow('{{.Kind}}', 'up')" title="Move Up">&uarr;</button>
+    <button type="button" class="btn btn-sm btn-outline"
+        onclick="moveDiscoverRow('{{.Kind}}', 'down')" title="Move Down">&darr;</button>
+</div>
+{{end}}
+{{end}}

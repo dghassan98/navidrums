@@ -18,9 +18,7 @@ const imageProxyPath = "/img"
 // this endpoint would be an open proxy usable to reach anything the server can
 // see, including private network addresses.
 var allowedImageHosts = map[string]bool{
-	"static.qobuz.com":    true,
-	"resources.tidal.com": true,
-	"static.tidal.com":    true,
+	"static.qobuz.com": true,
 }
 
 // imageProxyClient is separate from the catalog clients: artwork is small, and

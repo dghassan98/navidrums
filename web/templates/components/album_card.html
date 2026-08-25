@@ -1,9 +1,12 @@
-<div class="card">
+<div class="card{{if .Owned}} card--owned{{end}}">
     <div class="card-img-wrapper">
         <a href="/album/{{.ID}}">
             <img src="{{img .AlbumArtURL}}"
                 alt="{{.Title}}" loading="lazy">
         </a>
+        {{if .Owned}}
+        <span class="owned-badge" title="Already downloaded by Navidrums">&#10003;</span>
+        {{end}}
         <button class="btn btn-primary btn-sm card-img-overlay" onclick="queueDownload(event, 'album', '{{.ID}}', this)" title="Download Album">
             <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         </button>
@@ -22,4 +25,7 @@
         <a href="/album/{{.ID}}">{{.Title}}</a>
     </div>
     <div class="card-sub" title="{{.Artist}}"><a href="/artist/{{.ArtistID}}" class="hover:text-accent">{{.Artist}}</a></div>
+    {{if .Year}}
+    <div class="card-meta" {{if .ReleaseDate}}title="Released {{.ReleaseDate}}"{{end}}>{{.Year}}</div>
+    {{end}}
 </div>

@@ -1,0 +1,36 @@
+{
+  "genres": {
+    "limit": 50,
+    "offset": 0,
+    "total": 13,
+    "items": [
+      {
+        "id": 112,
+        "color": "#5eabc1",
+        "name": "Pop/Rock",
+        "path": [
+          112
+        ],
+        "slug": "pop-rock"
+      },
+      {
+        "id": 80,
+        "color": "#5eabc1",
+        "name": "Jazz",
+        "path": [
+          80
+        ],
+        "slug": "jazz"
+      },
+      {
+        "id": 10,
+        "color": "#5eabc1",
+        "name": "Klassik",
+        "path": [
+          10
+        ],
+        "slug": "classique"
+      }
+    ]
+  }
+}

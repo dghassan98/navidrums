@@ -1,0 +1,232 @@
+{
+  "id": 1246569,
+  "name": "Epic Local",
+  "slug": "epic-local",
+  "supplier_id": 23,
+  "albums_count": 752,
+  "image": null,
+  "description": null,
+  "albums": {
+    "offset": 0,
+    "limit": 5,
+    "total": 752,
+    "items": [
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/9k/dy/niod3doeady9k_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/9k/dy/niod3doeady9k_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/9k/dy/niod3doeady9k_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Sharaktah",
+          "id": 7652575,
+          "albums_count": 50,
+          "slug": "sharaktah",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 7652575,
+            "name": "Sharaktah",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0196874689479",
+        "released_at": 1791496800,
+        "label": {
+          "name": "Epic Local",
+          "id": 1246569,
+          "albums_count": 821,
+          "supplier_id": 23,
+          "slug": "epic-local"
+        },
+        "title": "SHARAKTAH",
+        "qobuz_id": 442685117,
+        "version": null,
+        "url": "/at-de/album/sharaktah-sharaktah/niod3doeady9k",
+        "slug": "sharaktah-sharaktah",
+        "duration": 2402,
+        "parental_warning": true,
+        "popularity": 0,
+        "tracks_count": 13,
+        "genre": {
+          "path": [
+            112,
+            119,
+            113
+          ],
+          "color": "#0070ef",
+          "name": "Alternativ und Indie",
+          "id": 113,
+          "slug": "alternatif-et-inde"
+        },
+        "maximum_channel_count": 2,
+        "id": "niod3doeady9k",
+        "maximum_sampling_rate": 44.1,
+        "articles": [],
+        "release_date_original": "2026-10-09",
+        "release_date_download": "2026-10-09",
+        "release_date_stream": "2026-10-09",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": false,
+        "sampleable": false,
+        "downloadable": false,
+        "displayable": true,
+        "purchasable_at": 1787263200,
+        "streamable_at": 1787263200,
+        "hires": true,
+        "hires_streamable": true
+      },
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/bs/49/ytefu19xf49bs_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/bs/49/ytefu19xf49bs_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/bs/49/ytefu19xf49bs_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Immi",
+          "id": 1860494,
+          "albums_count": 45,
+          "slug": "immi",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 1860494,
+            "name": "Immi",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0196874690208",
+        "released_at": 1787263200,
+        "label": {
+          "name": "Epic Local",
+          "id": 1246569,
+          "albums_count": 822,
+          "supplier_id": 23,
+          "slug": "epic-local"
+        },
+        "title": "Oranienplatz",
+        "qobuz_id": 445717569,
+        "version": null,
+        "url": "/at-de/album/oranienplatz-immi/ytefu19xf49bs",
+        "slug": "oranienplatz-immi",
+        "duration": 146,
+        "parental_warning": false,
+        "popularity": 0,
+        "tracks_count": 1,
+        "genre": {
+          "path": [
+            133
+          ],
+          "color": "#0070ef",
+          "name": "Hip-Hop/Rap",
+          "id": 133,
+          "slug": "rap-hip-hop"
+        },
+        "maximum_channel_count": 2,
+        "id": "ytefu19xf49bs",
+        "maximum_sampling_rate": 44.1,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787263200,
+        "streamable_at": 1787263200,
+        "hires": true,
+        "hires_streamable": true
+      },
+      {
+        "maximum_bit_depth": 24,
+        "image": {
+          "small": "https://static.qobuz.com/images/covers/fk/9w/ogspwials9wfk_230.jpg",
+          "thumbnail": "https://static.qobuz.com/images/covers/fk/9w/ogspwials9wfk_50.jpg",
+          "large": "https://static.qobuz.com/images/covers/fk/9w/ogspwials9wfk_600.jpg",
+          "back": null
+        },
+        "media_count": 1,
+        "artist": {
+          "image": null,
+          "name": "Elias",
+          "id": 122313,
+          "albums_count": 787,
+          "slug": "elias",
+          "picture": null
+        },
+        "artists": [
+          {
+            "id": 122313,
+            "name": "Elias",
+            "roles": [
+              "main-artist"
+            ]
+          }
+        ],
+        "upc": "0196874675090",
+        "released_at": 1787263200,
+        "label": {
+          "name": "Epic Local",
+          "id": 1246569,
+          "albums_count": 822,
+          "supplier_id": 23,
+          "slug": "epic-local"
+        },
+        "title": "TIPICO!",
+        "qobuz_id": 442717720,
+        "version": null,
+        "url": "/at-de/album/tipico-elias/ogspwials9wfk",
+        "slug": "tipico-elias",
+        "duration": 131,
+        "parental_warning": false,
+        "popularity": 0,
+        "tracks_count": 1,
+        "genre": {
+          "path": [
+            112,
+            117
+          ],
+          "color": "#0070ef",
+          "name": "Pop",
+          "id": 117,
+          "slug": "pop"
+        },
+        "maximum_channel_count": 2,
+        "id": "ogspwials9wfk",
+        "maximum_sampling_rate": 44.1,
+        "articles": [],
+        "release_date_original": "2026-08-21",
+        "release_date_download": "2026-08-21",
+        "release_date_stream": "2026-08-21",
+        "purchasable": true,
+        "streamable": true,
+        "previewable": true,
+        "sampleable": true,
+        "downloadable": true,
+        "displayable": true,
+        "purchasable_at": 1787263200,
+        "streamable_at": 1787263200,
+        "hires": true,
+        "hires_streamable": true
+      }
+    ]
+  }
+}

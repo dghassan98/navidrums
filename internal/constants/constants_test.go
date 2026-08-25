@@ -36,20 +36,6 @@ func TestQualityLevels(t *testing.T) {
 	}
 }
 
-func TestImageSizes(t *testing.T) {
-	sizes := []string{
-		ImageSizeSmall,
-		ImageSizeMedium,
-		ImageSizeLarge,
-	}
-
-	for _, s := range sizes {
-		if s == "" {
-			t.Error("Image size constant should not be empty")
-		}
-	}
-}
-
 func TestTimeouts(t *testing.T) {
 	if DefaultHTTPTimeout != 1*time.Minute {
 		t.Errorf("Expected DefaultHTTPTimeout to be 1 minutes, got %v", DefaultHTTPTimeout)
@@ -78,8 +64,6 @@ func TestConcurrency(t *testing.T) {
 
 func TestMimeTypes(t *testing.T) {
 	types := []string{
-		MimeTypeBTS,
-		MimeTypeDashXML,
 		MimeTypeFLAC,
 		MimeTypeMP3,
 		MimeTypeMP4,
