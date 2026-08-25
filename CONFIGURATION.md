@@ -163,6 +163,35 @@ overrides it; this is almost never needed.
 own TTLs — 24 hours for the genre tree, which is effectively static, and 1 hour for editorial
 rows and label pages.
 
+## Music Library Index (optional)
+
+A **read-only** mirror of what your Navidrome library already holds, so browse pages can
+show what is worth downloading rather than what you already own.
+
+| Variable | Purpose |
+|---|---|
+| `NAVIDROME_URL` | Base URL, e.g. `https://navidrome.example.com` |
+| `NAVIDROME_USER` | A Navidrome user; a plain non-admin account is enough |
+| `NAVIDROME_PASSWORD` | That user's password |
+
+Navidrums never modifies the library. Every call is a Subsonic GET, the password is sent
+only as a per-request salted token, and a test in `internal/subsonic` enforces both by
+asserting on the requests actually issued. The account needs no write permission.
+
+Sync from Settings → Music Library → **Sync now**. It rebuilds the index in one pass — a
+few thousand tracks takes seconds — and a failed sync leaves the previous index intact
+rather than a partial one.
+
+**Matching** is two-tier: exact on ISRC where present, then on normalised title and artist
+for everything else. Normalisation lowercases, folds Latin accents, strips punctuation and
+drops release qualifiers like `(Remastered 2011)`, while leaving non-Latin scripts
+untouched. It errs toward keeping distinct tracks apart, because a false match means
+skipping an album you do not actually have.
+
+**Ownership is reported per track, never as a boolean per album** — an album shows
+`5 of 13 tracks`. It also tracks whether the copies you hold are lossless, so an album you
+own only as MP3 still reads as worth downloading.
+
 ## Discover Rows
 
 The home page shows editorial rows from Qobuz, configured in Settings → Discover Rows. Rows

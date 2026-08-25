@@ -26,6 +26,7 @@ type Handler struct {
 	ProviderManager  *catalog.ProviderManager
 	SettingsRepo     *store.SettingsRepo
 	DB               *store.DB
+	LibraryService   *app.LibraryService
 	Config           *config.Config
 	Templates        *template.Template
 	Logger           *logger.Logger
@@ -34,13 +35,14 @@ type Handler struct {
 	recsMutex        sync.RWMutex
 }
 
-func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, cfg *config.Config) *Handler {
+func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, ls *app.LibraryService, cfg *config.Config) *Handler {
 	h := &Handler{
 		JobService:       js,
 		DownloadsService: ds,
 		ProviderManager:  pm,
 		SettingsRepo:     sr,
 		DB:               db,
+		LibraryService:   ls,
 		Config:           cfg,
 		Logger:           logger.Default(),
 		FormDecoder:      form.NewDecoder(),
@@ -114,6 +116,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/htmx/notifications/test", h.TestNotificationHTMX)
 
 
+
+		r.Get("/htmx/library-status", h.LibraryStatusHTMX)
+		r.Post("/htmx/library-sync", h.LibrarySyncHTMX)
 
 		r.Get("/htmx/discover-rows", h.GetDiscoverRowsHTMX)
 		r.Post("/htmx/discover-rows", h.SetDiscoverRowsHTMX)

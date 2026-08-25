@@ -2127,3 +2127,21 @@ code {
     opacity: 0.8;
     letter-spacing: 0.3px;
 }
+
+/* How much of an album the library already holds. Deliberately a count, not a
+   tick: most albums here are held as one or two cherry-picked tracks, so a
+   boolean "owned" would wrongly discourage downloading the other ten. */
+.owned-summary {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.owned-summary--complete {
+    border-color: var(--accent, #2f855a);
+    color: var(--text);
+}

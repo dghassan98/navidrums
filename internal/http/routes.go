@@ -224,6 +224,17 @@ func (h *Handler) AlbumPage(w http.ResponseWriter, r *http.Request) {
 		"ActivePage": "search",
 		"Album":      album,
 	}
+
+	// How much of this album the library already holds, and whether what it
+	// holds is lossless. A partial or lossy match still reads as worth
+	// downloading, which is the whole point of tracking quality.
+	if index := h.libraryIndex(); index != nil {
+		if owned, err := index.OwnershipFor(album.Tracks); err != nil {
+			h.Logger.Error("Library ownership lookup failed", "album", id, "error", err)
+		} else if owned.Total > 0 {
+			data["Owned"] = owned
+		}
+	}
 	h.RenderPage(w, "album.html", data)
 }
 

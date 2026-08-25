@@ -24,6 +24,7 @@ import (
 	httpapp "github.com/cesargomez89/navidrums/internal/http"
 	"github.com/cesargomez89/navidrums/internal/logger"
 	"github.com/cesargomez89/navidrums/internal/store"
+	"github.com/cesargomez89/navidrums/internal/subsonic"
 	"github.com/cesargomez89/navidrums/web"
 )
 
@@ -76,6 +77,12 @@ func main() {
 	jobService := app.NewJobService(db, appLogger)
 	downloadsService := app.NewDownloadsService(db, appLogger)
 
+	// Read-only index of the existing music library. Optional: without a
+	// Navidrome connection the browse pages simply show no ownership marks.
+	libraryService := app.NewLibraryService(
+		subsonic.NewClient(cfg.NavidromeURL, cfg.NavidromeUser, cfg.NavidromePassword),
+		db, appLogger.Logger)
+
 	// Initialize Router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -123,7 +130,7 @@ func main() {
 	})
 
 	// Routes
-	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, cfg)
+	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, libraryService, cfg)
 	h.RegisterRoutes(r)
 
 	// Start Server

@@ -44,6 +44,9 @@ type Config struct {
 	QobuzEmail            string
 	QobuzPasswordMD5      string
 	QobuzAuthToken        string
+	NavidromeURL          string
+	NavidromeUser         string
+	NavidromePassword     string
 	AdminPassword         string
 	NotifyURL             string
 	AdminSessionTTL       time.Duration
@@ -83,6 +86,9 @@ func Load() *Config {
 		QobuzEmail:            getEnv("QOBUZ_EMAIL", ""),
 		QobuzPasswordMD5:      qobuzPasswordMD5(),
 		QobuzAuthToken:        getEnv("QOBUZ_AUTH_TOKEN", ""),
+		NavidromeURL:          getEnv("NAVIDROME_URL", ""),
+		NavidromeUser:         getEnv("NAVIDROME_USER", ""),
+		NavidromePassword:     getEnv("NAVIDROME_PASSWORD", ""),
 		AdminPassword:         getEnv("NAVIDRUMS_ADMIN_PASSWORD", ""),
 		NotifyURL:             getEnv("NOTIFY_URL", ""),
 		AdminSessionTTL:       getEnvDuration("NAVIDRUMS_ADMIN_SESSION_TTL", 30*time.Minute),

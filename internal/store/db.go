@@ -487,6 +487,50 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		version:     18,
+		description: "Add the read-only Navidrome library index",
+		up: func(tx *sqlx.Tx) error {
+			// A mirror of what the music library already holds, so browse
+			// pages can tell what is worth downloading. Nothing here is
+			// authoritative: it is rebuilt wholesale from Navidrome on sync.
+			_, err := tx.Exec(`
+				CREATE TABLE IF NOT EXISTS library_tracks (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					navidrome_id TEXT NOT NULL UNIQUE,
+					isrc TEXT,
+					title_key TEXT NOT NULL,
+					artist_key TEXT NOT NULL,
+					album_key TEXT,
+					title TEXT,
+					artist TEXT,
+					album TEXT,
+					year INTEGER,
+					duration INTEGER,
+					suffix TEXT,
+					bit_rate INTEGER,
+					bit_depth INTEGER,
+					lossless BOOLEAN NOT NULL DEFAULT 0,
+					path TEXT,
+					synced_at DATETIME DEFAULT CURRENT_TIMESTAMP
+				)`)
+			if err != nil {
+				return err
+			}
+
+			// ISRC is the exact key and carries the fast path; the composite
+			// covers the majority of tracks that have no ISRC at all.
+			for _, q := range []string{
+				`CREATE INDEX IF NOT EXISTS idx_library_isrc ON library_tracks(isrc)`,
+				`CREATE INDEX IF NOT EXISTS idx_library_title_artist ON library_tracks(title_key, artist_key)`,
+			} {
+				if _, err := tx.Exec(q); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	},
 }
 
 type dbOps interface {

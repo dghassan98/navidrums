@@ -1,0 +1,38 @@
+{{define "library_status"}}
+{{if not .Configured}}
+<p class="hint">Not configured. Set <code>NAVIDROME_URL</code>, <code>NAVIDROME_USER</code> and
+    <code>NAVIDROME_PASSWORD</code> to index your existing library.</p>
+{{else}}
+<div class="info-grid">
+    <div class="data-item">
+        <span class="data-label">Indexed tracks</span>
+        <span class="data-value">{{if .Tracks}}{{.Tracks}}{{else}}0 &mdash; not synced yet{{end}}</span>
+    </div>
+    {{if .Albums}}
+    <div class="data-item">
+        <span class="data-label">Distinct albums</span>
+        <span class="data-value">{{.Albums}}</span>
+    </div>
+    {{end}}
+    {{if .Tracks}}
+    <div class="data-item">
+        <span class="data-label">With ISRC</span>
+        <span class="data-value">{{.WithISRC}} ({{.ISRCPercent}}%) &mdash; matched exactly</span>
+    </div>
+    <div class="data-item">
+        <span class="data-label">Lossless</span>
+        <span class="data-value">{{.Lossless}} ({{.LosslessPercent}}%)</span>
+    </div>
+    {{end}}
+    {{if .LastSynced}}
+    <div class="data-item">
+        <span class="data-label">Last synced</span>
+        <span class="data-value">{{.LastSynced}}</span>
+    </div>
+    {{end}}
+</div>
+{{if .LastError}}
+<p class="text-danger mt-2">{{.LastError}}</p>
+{{end}}
+{{end}}
+{{end}}

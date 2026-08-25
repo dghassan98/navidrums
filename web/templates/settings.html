@@ -123,6 +123,20 @@
 </div>
 
 <div class="section">
+    <h2>Music Library</h2>
+    <p class="hint">A <strong>read-only</strong> index of what your Navidrome library already holds, so
+        browse pages can show what is worth downloading. Navidrums only ever reads from Navidrome; it
+        never modifies the library.</p>
+    <div id="library-status" hx-get="/htmx/library-status" hx-trigger="load" hx-swap="innerHTML"></div>
+    <div class="toolbar-row mt-4">
+        <button class="btn btn-primary" hx-post="/htmx/library-sync"
+            hx-target="#library-status" hx-swap="innerHTML"
+            hx-disabled-elt="this" hx-indicator="#library-syncing">Sync now</button>
+        <span id="library-syncing" class="htmx-indicator text-muted">Syncing&hellip;</span>
+    </div>
+</div>
+
+<div class="section">
     <h2>Discover Rows</h2>
     <p class="hint">Which editorial rows appear on the home page, and in what order. Drag to reorder.</p>
     <div id="discover-rows-list" class="flex flex-col gap-2 mt-2"
