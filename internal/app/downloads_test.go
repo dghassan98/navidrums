@@ -305,19 +305,19 @@ func TestDownloadsService_DeleteDownload_CascadeCleanup(t *testing.T) {
 	}
 }
 
-func TestDownloadsService_EnqueueSyncHiFiJob(t *testing.T) {
+func TestDownloadsService_EnqueueSyncProviderJob(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	log := logger.Default()
 	svc := NewDownloadsService(db, log)
 
-	err := svc.EnqueueSyncHiFiJob("hifi_test")
+	err := svc.EnqueueSyncProviderJob("sync_test")
 	if err != nil {
-		t.Fatalf("EnqueueSyncHiFiJob failed: %v", err)
+		t.Fatalf("EnqueueSyncProviderJob failed: %v", err)
 	}
 
-	job, err := db.GetActiveJobBySourceID("hifi_test", domain.JobTypeSyncProvider)
+	job, err := db.GetActiveJobBySourceID("sync_test", domain.JobTypeSyncProvider)
 	if err != nil {
 		t.Fatalf("GetActiveJobBySourceID failed: %v", err)
 	}

@@ -277,61 +277,6 @@ func TestQobuzDirectRequiresCredentials(t *testing.T) {
 	}
 }
 
-func TestQobuzDirectResolveTrackID(t *testing.T) {
-	tests := []struct {
-		name   string
-		isrc   string
-		search string
-		want   string
-	}{
-		{
-			name:   "matching isrc wins",
-			isrc:   "GBDUW0000053",
-			search: `{"tracks":{"items":[{"id":999,"isrc":"OTHER0000001"},{"id":12345,"isrc":"GBDUW0000053"}]}}`,
-			want:   "12345",
-		},
-		{
-			name:   "mismatched isrc is not trusted",
-			isrc:   "GBDUW0000053",
-			search: `{"tracks":{"items":[{"id":999,"isrc":"OTHER0000001"}]}}`,
-			want:   "fallback-id",
-		},
-		{
-			name:   "no results keeps the given id",
-			isrc:   "GBDUW0000053",
-			search: `{"tracks":{"items":[]}}`,
-			want:   "fallback-id",
-		},
-		{
-			name: "no isrc keeps the given id",
-			isrc: "",
-			want: "fallback-id",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mux := http.NewServeMux()
-			mux.HandleFunc("/user/login", func(w http.ResponseWriter, r *http.Request) {
-				_, _ = io.WriteString(w, qobuzPaidLogin)
-			})
-			mux.HandleFunc("/track/search", func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = io.WriteString(w, tt.search)
-			})
-
-			server := httptest.NewServer(mux)
-			defer server.Close()
-
-			provider := NewQobuzDirectProvider(server.URL, testQobuzCredentials())
-			got := provider.resolveTrackID(context.Background(), "fallback-id", tt.isrc)
-			if got != tt.want {
-				t.Errorf("resolveTrackID(%q) = %q, want %q", tt.isrc, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestQobuzDirectReLoginsOnUnauthorized(t *testing.T) {
 	var mu sync.Mutex
 	var fileURLCalls int
@@ -514,4 +459,84 @@ func readStream(t *testing.T, body io.ReadCloser) string {
 		t.Fatalf("failed to read stream: %v", err)
 	}
 	return string(data)
+}
+
+// TestGetStreamPrefersTheGivenTrackID covers a real download failure: an ISRC
+// identifies a recording, not a release, so resolving one up front could swap
+// a streamable track for a SampleRestrictedByRightHolders duplicate of the
+// same recording on a different release.
+func TestGetStreamPrefersTheGivenTrackID(t *testing.T) {
+	var searched bool
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/user/login", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"user_auth_token":"tok","user":{"credential":{"parameters":{"lossy_streaming":true}}}}`))
+	})
+	mux.HandleFunc("/track/search", func(w http.ResponseWriter, r *http.Request) {
+		searched = true
+		_, _ = w.Write([]byte(`{"tracks":{"items":[{"id":999,"isrc":"USABC1234567"}]}}`))
+	})
+	mux.HandleFunc("/track/getFileUrl", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("track_id") != "111" {
+			http.Error(w, "wrong track", http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(`{"url":"` + streamURLFor(r) + `","mime_type":"audio/flac"}`))
+	})
+	mux.HandleFunc("/audio", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(testAudioBody))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	p := NewQobuzDirectProvider(srv.URL, testQobuzCredentials())
+	body, _, err := p.GetStream(context.Background(), "111", "USABC1234567", constants.QualityLossless)
+	if err != nil {
+		t.Fatalf("GetStream failed: %v", err)
+	}
+	if got := readStream(t, body); got != testAudioBody {
+		t.Errorf("stream body = %q", got)
+	}
+	if searched {
+		t.Error("an ISRC search ran even though the given track ID worked")
+	}
+}
+
+// TestGetStreamNeverSubstitutesAnotherTrackID pins the rule that Qobuz is the
+// only provider: a restricted track fails as itself rather than silently
+// downloading a different release of the same recording.
+func TestGetStreamNeverSubstitutesAnotherTrackID(t *testing.T) {
+	var searched bool
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/user/login", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"user_auth_token":"tok","user":{"credential":{"parameters":{"lossy_streaming":true}}}}`))
+	})
+	mux.HandleFunc("/track/search", func(w http.ResponseWriter, r *http.Request) {
+		searched = true
+		_, _ = w.Write([]byte(`{"tracks":{"items":[{"id":222,"isrc":"USABC1234567"}]}}`))
+	})
+	mux.HandleFunc("/track/getFileUrl", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("track_id") != "111" {
+			t.Errorf("asked for track %s; only the given id may be requested", r.URL.Query().Get("track_id"))
+		}
+		_, _ = w.Write([]byte(`{"url":"","restrictions":[{"code":"SampleRestrictedByRightHolders"}]}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	p := NewQobuzDirectProvider(srv.URL, testQobuzCredentials())
+	_, _, err := p.GetStream(context.Background(), "111", "USABC1234567", constants.QualityLossless)
+
+	if !errors.Is(err, ErrQobuzNotStreamable) {
+		t.Errorf("err = %v, want ErrQobuzNotStreamable", err)
+	}
+	if searched {
+		t.Error("an ISRC search ran; the track id must never be substituted")
+	}
+}
+
+// streamURLFor points the provider back at this test server's audio route.
+func streamURLFor(r *http.Request) string {
+	return "http://" + r.Host + "/audio"
 }

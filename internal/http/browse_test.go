@@ -258,3 +258,20 @@ func indexOfTitle(albums []domain.Album, title string) int {
 	}
 	return -1
 }
+
+func TestDiscoverRowDoesNotServeTheForYouRow(t *testing.T) {
+	// for-you is a valid configurable row, but the page renders it inline
+	// against /htmx/lucky. Reaching it here would send "for-you" to Qobuz as
+	// a featured type, which is a 400.
+	h := newBrowseHandler(t)
+	h.ProviderManager = catalog.NewProviderManagerWithProvider(catalog.NewMockProvider())
+
+	rec := serveRoute(h, http.MethodGet, "/htmx/discover/row/{kind}", "/htmx/discover/row/for-you")
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "htmx/lucky") {
+		t.Errorf("body should say where the row comes from: %s", rec.Body.String())
+	}
+}

@@ -905,7 +905,7 @@ type enrichAction string
 const (
 	enrichActionSyncFile        enrichAction = "sync_file"
 	enrichActionSyncMusicBrainz enrichAction = "sync_musicbrainz"
-	enrichActionSyncHiFi        enrichAction = "sync_hifi"
+	enrichActionSyncProvider    enrichAction = "sync_provider"
 )
 
 func (h *Handler) handleTrackEnrich(w http.ResponseWriter, r *http.Request) (*domain.Track, bool) {
@@ -1002,13 +1002,13 @@ func (h *Handler) EnrichProviderHTMX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.DownloadsService.EnqueueSyncHiFiJob(track.ProviderID); err != nil {
-		h.Logger.Error("Failed to enqueue enrich Hi-Fi job", "error", err)
+	if err := h.DownloadsService.EnqueueSyncProviderJob(track.ProviderID); err != nil {
+		h.Logger.Error("Failed to enqueue provider enrichment job", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	h.renderEnrichResponse(w, track, enrichActionSyncHiFi)
+	h.renderEnrichResponse(w, track, enrichActionSyncProvider)
 }
 
 func (h *Handler) SyncAllHTMX(w http.ResponseWriter, r *http.Request) {
@@ -1041,8 +1041,8 @@ func (h *Handler) BulkEnrichProviderHTMX(w http.ResponseWriter, r *http.Request)
 	} else {
 		count = 0
 		for _, id := range ids {
-			if e := h.DownloadsService.EnqueueSyncHiFiJob(id); e != nil {
-				h.Logger.Error("Failed to enqueue HiFi job", "id", id, "error", e)
+			if e := h.DownloadsService.EnqueueSyncProviderJob(id); e != nil {
+				h.Logger.Error("Failed to enqueue provider sync job", "id", id, "error", e)
 				continue
 			}
 			count++
@@ -1050,7 +1050,7 @@ func (h *Handler) BulkEnrichProviderHTMX(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err != nil {
-		h.Logger.Error("Failed to enqueue HiFi jobs", "error", err)
+		h.Logger.Error("Failed to enqueue provider sync jobs", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -17,11 +17,17 @@ type DiscoverRow struct {
 // playlist/getFeatured and is served by its own route.
 const PlaylistsRowKind = "playlists"
 
+// ForYouRowKind is the library-seeded recommendations panel. It comes from the
+// tracks table rather than Qobuz editorial, but it is a row on the same page,
+// so it is ordered and toggled with the rest instead of being pinned.
+const ForYouRowKind = "for-you"
+
 // DefaultDiscoverRows is what a fresh install shows. Everything Qobuz offers is
 // listed so it can be switched on in Settings, but only a readable handful
 // starts enabled.
 func DefaultDiscoverRows() []DiscoverRow {
 	return []DiscoverRow{
+		{Kind: ForYouRowKind, Enabled: true},
 		{Kind: "new-releases", Enabled: true},
 		{Kind: "editor-picks", Enabled: true},
 		{Kind: "press-awards", Enabled: true},
@@ -45,7 +51,7 @@ func DefaultDiscoverRows() []DiscoverRow {
 // request. Qobuz answers an unknown album/getFeatured type with a 400, so an
 // invalid stored preference has to be dropped rather than rendered.
 func IsValidDiscoverKind(kind string) bool {
-	return kind == PlaylistsRowKind || catalog.IsValidFeaturedKind(kind)
+	return kind == PlaylistsRowKind || kind == ForYouRowKind || catalog.IsValidFeaturedKind(kind)
 }
 
 // ParseDiscoverRows turns stored JSON into the row list, falling back to the
@@ -126,4 +132,5 @@ var discoverRowTitles = map[string]string{
 	"universal-jeunesse": "Universal Jeunesse",
 	"universal-chanson":  "Universal Chanson",
 	PlaylistsRowKind:     "Curated Playlists",
+	ForYouRowKind:        "Because you downloaded…",
 }

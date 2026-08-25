@@ -649,7 +649,7 @@ func (h *ContainerJobHandler) createTracksAndJobs(parentJobID string, catalogTra
 	return createdCount
 }
 
-// SyncJobHandler handles all metadata resyncs (Hi-Fi, MusicBrainz, File).
+// SyncJobHandler handles all metadata resyncs (provider, MusicBrainz, File).
 type SyncJobHandler struct {
 	Repo            *store.DB
 	Config          *config.Config
@@ -663,7 +663,7 @@ func (h *SyncJobHandler) Handle(ctx context.Context, job *domain.Job, logger *sl
 	case domain.JobTypeSyncMusicBrainz:
 		return h.processSyncMusicBrainzJob(ctx, job, logger)
 	case domain.JobTypeSyncProvider:
-		return h.processSyncHiFiJob(ctx, job, logger)
+		return h.processSyncProviderJob(ctx, job, logger)
 	case domain.JobTypeSyncFile:
 		return h.processSyncFileJob(ctx, job, logger)
 	default:
@@ -671,7 +671,7 @@ func (h *SyncJobHandler) Handle(ctx context.Context, job *domain.Job, logger *sl
 	}
 }
 
-func (h *SyncJobHandler) processSyncHiFiJob(ctx context.Context, job *domain.Job, logger *slog.Logger) error {
+func (h *SyncJobHandler) processSyncProviderJob(ctx context.Context, job *domain.Job, logger *slog.Logger) error {
 	track, ok := h.getTrackForSync(job, logger)
 	if !ok {
 		return nil
@@ -684,7 +684,7 @@ func (h *SyncJobHandler) processSyncHiFiJob(ctx context.Context, job *domain.Job
 		return nil
 	}
 
-	h.completeSyncBasic(job, track, logger, "Sync Hi-Fi job completed")
+	h.completeSyncBasic(job, track, logger, "Provider sync job completed")
 	return nil
 }
 

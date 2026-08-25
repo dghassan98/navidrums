@@ -95,16 +95,16 @@ func seedLegacyProviderState(t *testing.T, db *DB) {
 			name TEXT NOT NULL,
 			url TEXT NOT NULL,
 			position INTEGER NOT NULL DEFAULT 0,
-			type TEXT NOT NULL DEFAULT 'hifi'
+			type TEXT NOT NULL
 		)`,
 		`INSERT INTO providers (type, url, name, position)
 		 VALUES ('qobuz-direct', 'https://qobuz.example.test/api', 'Custom', 0)`,
 		`INSERT INTO providers (type, url, name, position)
-		 VALUES ('monochrome', 'https://mono.example.test', 'Mono', 1)`,
-		`INSERT INTO settings (key, value) VALUES ('active_metadata_provider', 'monochrome')`,
-		`INSERT INTO settings (key, value) VALUES ('active_download_provider', 'monochrome')`,
-		`INSERT INTO settings (key, value) VALUES ('active_streaming_provider', 'monochrome')`,
-		`INSERT INTO settings (key, value) VALUES ('active_provider', 'monochrome')`,
+		 VALUES ('legacy', 'https://legacy.example.test', 'Legacy', 1)`,
+		`INSERT INTO settings (key, value) VALUES ('active_metadata_provider', 'legacy')`,
+		`INSERT INTO settings (key, value) VALUES ('active_download_provider', 'legacy')`,
+		`INSERT INTO settings (key, value) VALUES ('active_streaming_provider', 'legacy')`,
+		`INSERT INTO settings (key, value) VALUES ('active_provider', 'legacy')`,
 		`INSERT INTO settings (key, value) VALUES ('custom_providers', '[]')`,
 		`INSERT INTO jobs (type, status, source_id) VALUES ('sync_hifi', 'queued', 'track-1')`,
 	}

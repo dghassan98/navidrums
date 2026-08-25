@@ -29,7 +29,7 @@ All routes are server-rendered HTML endpoints using HTMX for partial updates.
 | POST | `/htmx/retry/{id}` | Retry a failed job |
 | POST | `/htmx/history/clear` | Clear finished jobs |
 | GET | `/htmx/downloads?q={query}` | Downloads browser fragment |
-| POST | `/htmx/downloads/sync` | Sync all completed tracks (enrich from Hi-Fi) |
+| POST | `/htmx/downloads/sync` | Sync all completed tracks (enrich from Qobuz) |
 | POST | `/htmx/downloads/bulk-sync` | Sync selected tracks |
 | POST | `/htmx/downloads/bulk-genre` | Update genre for selected tracks |
 | POST | `/htmx/downloads/bulk-delete` | Delete selected tracks |

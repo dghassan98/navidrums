@@ -74,14 +74,14 @@ func (e *MetadataEnricher) EnrichCompleteFromDownloadProvider(ctx context.Contex
 	e.enrichComplete(ctx, track, e.providerManager.Provider(), logger)
 }
 
-func (e *MetadataEnricher) enrichComplete(ctx context.Context, track *domain.Track, hifiProvider catalog.Provider, logger *slog.Logger) {
+func (e *MetadataEnricher) enrichComplete(ctx context.Context, track *domain.Track, metadataProvider catalog.Provider, logger *slog.Logger) {
 	logger.Debug("EnrichComplete: starting", "track_year", track.Year, "track_provider_id", track.ProviderID)
-	// 1. Hi-Fi metadata refresh
-	if err := e.enrichFromProvider(ctx, track, hifiProvider, logger); err != nil {
-		logger.Warn("EnrichFromHiFi failed, proceeding with existing data", "error", err)
+	// 1. Provider metadata refresh
+	if err := e.enrichFromProvider(ctx, track, metadataProvider, logger); err != nil {
+		logger.Warn("Provider enrichment failed, proceeding with existing data", "error", err)
 	}
 
-	logger.Debug("EnrichComplete: after Hi-Fi", "track_year", track.Year)
+	logger.Debug("EnrichComplete: after provider", "track_year", track.Year)
 
 	// 2. MusicBrainz Gap Fill
 	if err := e.EnrichTrack(ctx, track, logger); err != nil {
@@ -91,7 +91,7 @@ func (e *MetadataEnricher) enrichComplete(ctx context.Context, track *domain.Tra
 	logger.Debug("EnrichComplete: after MusicBrainz", "track_year", track.Year)
 
 	// 3. Lyrics
-	e.fetchLyrics(ctx, track, hifiProvider, logger)
+	e.fetchLyrics(ctx, track, metadataProvider, logger)
 	if e.lyricsFallback != nil && (track.Lyrics == "" || track.Subtitles == "") {
 		e.lyricsFallback.Fetch(ctx, track, logger)
 	}
@@ -133,7 +133,7 @@ func (e *MetadataEnricher) fetchLyrics(ctx context.Context, track *domain.Track,
 	}
 }
 
-func (e *MetadataEnricher) EnrichFromHiFi(ctx context.Context, track *domain.Track, logger *slog.Logger) error {
+func (e *MetadataEnricher) EnrichFromProvider(ctx context.Context, track *domain.Track, logger *slog.Logger) error {
 	return e.enrichFromProvider(ctx, track, e.providerManager.Provider(), logger)
 }
 
@@ -142,10 +142,10 @@ func (e *MetadataEnricher) enrichFromProvider(ctx context.Context, track *domain
 	var album *domain.Album
 	var err error
 
-	if e.needsHiFiEnrichment(track) {
+	if e.needsProviderEnrichment(track) {
 		ct, err = provider.GetTrack(ctx, track.ProviderID)
 		if err != nil {
-			logger.Warn("Failed to fetch Hi-Fi metadata for enrichment", "error", err)
+			logger.Warn("Failed to fetch provider metadata for enrichment", "error", err)
 		}
 	}
 
@@ -173,16 +173,16 @@ func (e *MetadataEnricher) enrichFromProvider(ctx context.Context, track *domain
 		}
 	}
 
-	// Merge Hi-Fi Data together
-	e.mergeHiFi(track, ct, album)
+	// Merge provider data together
+	e.mergeProvider(track, ct, album)
 	return nil
 }
 
 func (e *MetadataEnricher) UpdateTrackFromCatalog(track *domain.Track, ct *domain.CatalogTrack, logger *slog.Logger) {
-	e.mergeHiFi(track, ct, nil)
+	e.mergeProvider(track, ct, nil)
 }
 
-func (e *MetadataEnricher) mergeHiFi(track *domain.Track, ct *domain.CatalogTrack, album *domain.Album) {
+func (e *MetadataEnricher) mergeProvider(track *domain.Track, ct *domain.CatalogTrack, album *domain.Album) {
 	if ct == nil {
 		ct = &domain.CatalogTrack{}
 	}
@@ -343,7 +343,7 @@ func (e *MetadataEnricher) needsMusicBrainzEnrichment(track *domain.Track) bool 
 		track.ReleaseID == "" || len(track.Tags) == 0 || e.missingCommonMetadata(track)
 }
 
-func (e *MetadataEnricher) needsHiFiEnrichment(track *domain.Track) bool {
+func (e *MetadataEnricher) needsProviderEnrichment(track *domain.Track) bool {
 	return track.Album == "" || track.AlbumArtist == "" ||
 		track.AlbumID == "" || track.TrackNumber == 0 || track.DiscNumber == 0 ||
 		track.TotalTracks == 0 || track.TotalDiscs == 0 || track.ReleaseDate == "" ||

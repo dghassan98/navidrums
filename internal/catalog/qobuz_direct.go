@@ -241,16 +241,23 @@ func (p *QobuzDirectProvider) GetPlaylist(ctx context.Context, id string) (*doma
 	return resp.ToDomain(), nil
 }
 
-func (p *QobuzDirectProvider) GetStream(ctx context.Context, trackID string, isrc string, quality string) (io.ReadCloser, string, error) {
+func (p *QobuzDirectProvider) GetStream(ctx context.Context, trackID string, _ string, quality string) (io.ReadCloser, string, error) {
 	// Report the more fundamental gap first: an account that cannot be
 	// identified at all, before complaining about the signing secret.
 	if !p.creds.CanAuthenticate() {
 		return nil, "", ErrQobuzCredentialsMissing
 	}
 
-	tid := p.resolveTrackID(ctx, trackID, isrc)
-
-	fileURL, mimeType, err := p.trackFileURL(ctx, tid, quality)
+	// The track ID is used exactly as given. Qobuz is the only provider, so it
+	// is always already a Qobuz ID for the precise release that was browsed.
+	//
+	// An earlier version resolved the ID through an ISRC search first, which
+	// existed to map another service's ID onto Qobuz. That is actively
+	// harmful now: an
+	// ISRC identifies a *recording*, not a release, and the same recording
+	// sits on many Qobuz releases with different rights — so it could swap a
+	// streamable track for a SampleRestrictedByRightHolders duplicate.
+	fileURL, mimeType, err := p.trackFileURL(ctx, trackID, quality)
 	if err != nil {
 		return nil, "", err
 	}
@@ -327,31 +334,6 @@ func qobuzDirectFormatID(quality string) int {
 	default:
 		return 6
 	}
-}
-
-// resolveTrackID maps an ISRC onto a Qobuz track ID, only trusting a search
-// result whose ISRC matches exactly.
-func (p *QobuzDirectProvider) resolveTrackID(ctx context.Context, trackID string, isrc string) string {
-	if isrc == "" {
-		return trackID
-	}
-
-	params := url.Values{}
-	params.Set("query", isrc)
-	params.Set("limit", "10")
-
-	var resp QobuzSearchData
-	if err := p.authedGet(ctx, "track/search", params, &resp); err != nil {
-		return trackID
-	}
-
-	for _, item := range resp.Tracks.Items {
-		if item.ID > 0 && strings.EqualFold(item.ISRC, isrc) {
-			return strconv.Itoa(item.ID)
-		}
-	}
-
-	return trackID
 }
 
 func (p *QobuzDirectProvider) GetSimilarAlbums(ctx context.Context, id string) ([]domain.Album, error) {

@@ -3,7 +3,6 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -426,74 +425,23 @@ var migrations = []migration{
 	},
 	{
 		version:     15,
-		description: "Add type column to providers table",
+		description: "Retired: added a type column to the providers table",
 		up: func(tx *sqlx.Tx) error {
-			_, err := tx.Exec("ALTER TABLE providers ADD COLUMN type TEXT NOT NULL DEFAULT 'hifi'")
-			if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-				return err
-			}
-			_, err = tx.Exec("UPDATE providers SET type = 'hifi' WHERE type IS NULL OR type = ''")
-			return err
+			// Migration 17 drops the providers table outright, so whatever
+			// this did is erased before the database is used. Kept as a
+			// numbered no-op because migration numbers are history: renumbering
+			// would re-run later migrations on installs that already applied
+			// them.
+			return nil
 		},
 	},
 	{
 		version:     16,
-		description: "Seed default Monochrome provider instance",
+		description: "Retired: seeded default provider instances",
 		up: func(tx *sqlx.Tx) error {
-			// Monochrome no longer proxies Qobuz: an instance serves catalog
-			// metadata and full-length downloads on its own, so seed the
-			// default one. Users can add, reorder or remove instances later.
-			var existing int
-			if err := tx.QueryRow(`SELECT COUNT(*) FROM providers`).Scan(&existing); err != nil {
-				return err
-			}
-
-			var seeded int
-			err := tx.QueryRow(`SELECT COUNT(*) FROM providers WHERE type = 'monochrome'`).Scan(&seeded)
-			if err != nil {
-				return err
-			}
-
-			if seeded == 0 {
-				_, err = tx.Exec(
-					`INSERT OR IGNORE INTO providers (type, url, name, position) VALUES ('monochrome', ?, ?, 0)`,
-					"https://lol.samidy.workers.dev", "Monochrome (default)",
-				)
-				if err != nil {
-					return err
-				}
-			}
-
-			// The official Qobuz endpoint is fixed; it only works once the
-			// QOBUZ_* credentials are configured, so seed it but never
-			// select it automatically.
-			_, err = tx.Exec(
-				`INSERT OR IGNORE INTO providers (type, url, name, position) VALUES ('qobuz-direct', ?, ?, 0)`,
-				"https://www.qobuz.com/api.json/0.2", "Qobuz (my subscription)",
-			)
-			if err != nil {
-				return err
-			}
-
-			// Only a fresh install defaults to Monochrome. An install that
-			// already has providers keeps whatever it was using.
-			if existing > 0 {
-				return nil
-			}
-
-			for _, key := range []string{
-				"active_metadata_provider",
-				"active_download_provider",
-				"active_streaming_provider",
-			} {
-				_, err = tx.Exec(
-					`INSERT OR IGNORE INTO settings (key, value) VALUES (?, 'monochrome')`, key,
-				)
-				if err != nil {
-					return err
-				}
-			}
-
+			// Same as 15. This seeded rows into the providers table and set the
+			// per-operation provider settings; migration 17 deletes both, so
+			// the end state is identical with or without it.
 			return nil
 		},
 	},
@@ -505,14 +453,13 @@ var migrations = []migration{
 			// before the table goes, so it is not silently lost. Literals,
 			// not constants: a migration must not track a value the
 			// application is free to change later.
+			// Best effort: the table may be absent (fresh install) or an older
+			// shape than expected. Losing a custom endpoint is a small cost;
+			// refusing to migrate over it is not.
 			var url string
 			err := tx.QueryRow(
 				`SELECT url FROM providers WHERE type = 'qobuz-direct'
 				 ORDER BY position LIMIT 1`).Scan(&url)
-			if err != nil && !errors.Is(err, sql.ErrNoRows) &&
-				!strings.Contains(err.Error(), "no such table") {
-				return err
-			}
 			if err == nil && url != "" && url != "https://www.qobuz.com/api.json/0.2" {
 				_, saveErr := tx.Exec(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,

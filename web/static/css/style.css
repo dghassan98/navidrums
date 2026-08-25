@@ -1921,6 +1921,37 @@ textarea {
         width: auto;
         justify-content: center;
     }
+
+    /* Discover rows on a phone. The desktop 200px card fills a ~380px
+       viewport, which turns a scrolling row into one card at a time and hides
+       that the row scrolls at all. 140px shows two and a half, so the cut-off
+       card advertises the swipe. */
+    .discover-row .list-grid {
+        display: flex !important;
+        grid-template-columns: none !important;
+        overflow-x: auto !important;
+        gap: 10px;
+        /* Let the row bleed to the screen edges so the last card is clearly
+           cut off rather than looking like the end of the list. */
+        margin-inline: -16px;
+        padding-inline: 16px;
+        scroll-padding-inline: 16px;
+    }
+
+    .discover-row .list-grid > .card {
+        flex: 0 0 140px !important;
+        width: 140px !important;
+        max-width: 140px !important;
+        min-width: 0;
+        padding: 8px;
+    }
+
+    .discover-row .list-grid > .card .card-sub,
+    .discover-row .list-grid > .card .card-meta {
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+    }
+
 }
 
 

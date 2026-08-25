@@ -101,7 +101,7 @@ func (s *DownloadsService) EnqueueSyncMetadataJob(providerID string) error {
 	return s.enqueueSyncJob(providerID, domain.JobTypeSyncMusicBrainz)
 }
 
-func (s *DownloadsService) EnqueueSyncHiFiJob(providerID string) error {
+func (s *DownloadsService) EnqueueSyncProviderJob(providerID string) error {
 	return s.enqueueSyncJob(providerID, domain.JobTypeSyncProvider)
 }
 

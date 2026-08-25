@@ -104,7 +104,7 @@
             </p>
             <div class="flex gap-2 justify-end">
                 <button onclick="closeSyncModal()" class="btn btn-outline btn-sm">Cancel</button>
-                <button onclick="enrichHiFi()" class="btn btn-sm">Enrich from HIFI</button>
+                <button onclick="enrichProvider()" class="btn btn-sm">Enrich from Qobuz</button>
                 <button onclick="enrichMusicBrainz()" class="btn btn-sm">Enrich from MusicBrainz</button>
             </div>
         </div>
@@ -212,9 +212,9 @@
             }
         }
 
-        function enrichHiFi() {
+        function enrichProvider() {
             closeSyncModal();
-            _postForm('/htmx/downloads/enrich-hifi' + listParams(), getSelectedIDs());
+            _postForm('/htmx/downloads/enrich-provider' + listParams(), getSelectedIDs());
         }
 
         function enrichMusicBrainz() {

@@ -19,9 +19,9 @@ func TestProxiedImageURL(t *testing.T) {
 			want: imageProxyPath + "?url=https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fartists%2Fcovers%2Flarge%2Fabc.jpg",
 		},
 		{
-			name: "a removed provider's CDN is no longer proxied",
-			raw:  "https://resources.tidal.com/images/a/b/640x640.jpg",
-			want: "https://resources.tidal.com/images/a/b/640x640.jpg",
+			name: "an unlisted CDN is not proxied",
+			raw:  "https://images.example.test/a/b/640x640.jpg",
+			want: "https://images.example.test/a/b/640x640.jpg",
 		},
 		{"empty falls back to the placeholder", "", placeholderImagePath},
 		{"unknown host passes through", "https://example.test/a.jpg", "https://example.test/a.jpg"},

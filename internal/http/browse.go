@@ -39,6 +39,13 @@ func (h *Handler) DiscoverRowHTMX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The library-seeded row is rendered inline by the page and served by
+	// /htmx/lucky, so it never belongs on this route.
+	if kind == app.ForYouRowKind {
+		h.renderEmptyRow(w, app.DiscoverRowTitle(kind), "This row is served by /htmx/lucky.")
+		return
+	}
+
 	albums, err := h.ProviderManager.Provider().GetFeatured(r.Context(), kind, genreID, discoverRowSize, 0)
 	if err != nil {
 		h.Logger.Error("Discover row failed", "kind", kind, "error", err)

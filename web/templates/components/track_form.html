@@ -163,8 +163,8 @@
         <button type="submit" class="btn btn-warning" formaction="/htmx/track/{{.Track.ID}}/sync">Sync to File</button>
         <button type="submit" class="btn btn-outline" formaction="/htmx/track/{{.Track.ID}}/enrich">Enrich from
             MusicBrainz</button>
-        <button type="submit" class="btn btn-outline" formaction="/htmx/track/{{.Track.ID}}/enrich-hifi">Enrich from
-            Hi-Fi</button>
+        <button type="submit" class="btn btn-outline" formaction="/htmx/track/{{.Track.ID}}/enrich-provider">Enrich from
+            Qobuz</button>
         <a href="/downloads" class="btn btn-outline">Cancel</a>
     </div>
 </form>
@@ -173,8 +173,8 @@
 <div class="alert alert-success mb-4">
     {{if eq .JobEnqueuedType "sync_file"}}
     Sync job enqueued. Check the <a href="/queue">queue</a> for progress.
-    {{else if eq .JobEnqueuedType "sync_hifi"}}
-    Hi-Fi enrichment job enqueued. Check the <a href="/queue">queue</a> for progress.
+    {{else if eq .JobEnqueuedType "sync_provider"}}
+    Qobuz enrichment job enqueued. Check the <a href="/queue">queue</a> for progress.
     {{else}}
     Metadata enrichment job enqueued. Check the <a href="/queue">queue</a> for progress.
     {{end}}
