@@ -256,6 +256,18 @@ func (h *Handler) DownloadHTMX(w http.ResponseWriter, r *http.Request) {
 	jobType := chi.URLParam(r, "type")
 	id := chi.URLParam(r, "id")
 
+	// Refuse a single track that is already in the library, unless the caller
+	// deliberately overrides. Re-downloading what you already have is the exact
+	// thing the library index exists to prevent, and silently queueing it makes
+	// the ownership marks pointless.
+	if domain.JobType(jobType) == domain.JobTypeTrack && r.URL.Query().Get("force") != "1" {
+		if held, why := h.trackAlreadyHeld(r, id); held {
+			w.WriteHeader(http.StatusConflict)
+			writeAlert(w, "alert-warning", why)
+			return
+		}
+	}
+
 	_, err := h.JobService.EnqueueJob(id, domain.JobType(jobType))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

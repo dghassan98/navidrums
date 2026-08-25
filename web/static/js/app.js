@@ -5,18 +5,41 @@ function handleDownload(btn) {
   btn.innerText = '...';
 }
 
-function queueDownload(e, type, id, btn) {
+function resetDownloadButton(btn) {
+  btn.disabled = false;
+  btn.innerText = btn.getAttribute('data-original') || 'Download';
+}
+
+function queueDownload(e, type, id, btn, force) {
   e.preventDefault();
   e.stopPropagation();
   handleDownload(btn);
-  fetch(`/htmx/download/${type}/${id}`, {
+
+  const url = `/htmx/download/${type}/${id}` + (force ? '?force=1' : '');
+  fetch(url, {
     method: 'POST',
     headers: { 'HX-Request': 'true' }
-  }).then(() => {
-    // Keep button disabled - don't re-enable
+  }).then(response => {
+    // 409 means the library already holds this track. Say so and let the
+    // download happen anyway if that is really what was wanted, rather than
+    // silently re-downloading or silently refusing.
+    if (response.status === 409) {
+      return response.text().then(body => {
+        const message = body.replace(/<[^>]*>/g, '').trim();
+        resetDownloadButton(btn);
+        if (window.confirm(`${message}
+
+Download it again anyway?`)) {
+          queueDownload(e, type, id, btn, true);
+        }
+      });
+    }
+    if (!response.ok) {
+      resetDownloadButton(btn);
+    }
+    // Otherwise keep the button disabled: the job is queued.
   }).catch(() => {
-    btn.disabled = false;
-    btn.innerText = btn.getAttribute('data-original') || 'Download';
+    resetDownloadButton(btn);
   });
 }
 

@@ -152,3 +152,35 @@ func (h *Handler) DownloadMissingHTMX(w http.ResponseWriter, r *http.Request) {
 func writeAlert(w http.ResponseWriter, class, message string) {
 	_, _ = fmt.Fprintf(w, "<div class='alert %s'>%s</div>", class, html.EscapeString(message))
 }
+
+// trackAlreadyHeld reports whether the library already holds this track, and
+// why, phrased for the person about to download it.
+//
+// A lossy copy is not treated as "held": upgrading it is a legitimate reason to
+// download, and blocking that would make the feature obstructive rather than
+// useful.
+func (h *Handler) trackAlreadyHeld(r *http.Request, trackID string) (bool, string) {
+	index := h.libraryIndex()
+	if index == nil {
+		return false, ""
+	}
+
+	track, err := h.ProviderManager.Provider().GetTrack(r.Context(), trackID)
+	if err != nil || track == nil {
+		// Never block a download because the lookup failed.
+		return false, ""
+	}
+
+	// OwnershipFor marks the slice elements in place, so read the result back
+	// from the slice rather than from the original pointer.
+	marked := []domain.CatalogTrack{*track}
+	if _, err := index.OwnershipFor(marked); err != nil {
+		h.Logger.Error("Ownership check failed", "track", trackID, "error", err)
+		return false, ""
+	}
+
+	if marked[0].Owned && marked[0].OwnedLossless {
+		return true, fmt.Sprintf("%q is already in your library as a lossless copy.", track.Title)
+	}
+	return false, ""
+}

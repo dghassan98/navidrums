@@ -96,9 +96,26 @@ func (item *QobuzSearchPlaylistItem) ToDomain() domain.Playlist {
 }
 
 func (resp *QobuzAlbumResponse) ToDomain() *domain.Album {
-	tracks := make([]domain.CatalogTrack, 0)
+	// Tracks embedded in an album response carry no album object of their own —
+	// it would be circular — so their album fields arrive empty. Backfill them
+	// from the parent, or track rows render with no cover art and a dangling
+	// "Artist ·" where the album name should be.
+	tracks := make([]domain.CatalogTrack, 0, len(resp.Tracks.Items))
 	for _, t := range resp.Tracks.Items {
-		tracks = append(tracks, t.ToDomain())
+		track := t.ToDomain()
+		if track.AlbumID == "" {
+			track.AlbumID = resp.ID
+		}
+		if track.Album == "" {
+			track.Album = resp.Title
+		}
+		if track.AlbumArtist == "" {
+			track.AlbumArtist = resp.Artist.Name
+		}
+		if track.AlbumArtURL == "" {
+			track.AlbumArtURL = resp.Image.Large
+		}
+		tracks = append(tracks, track)
 	}
 
 	var artistIDs []string

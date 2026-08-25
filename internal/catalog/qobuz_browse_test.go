@@ -290,3 +290,36 @@ func TestAlbumDetailMapsLabelAndGenreIDs(t *testing.T) {
 		t.Error("label and genre names should still be populated")
 	}
 }
+
+// TestAlbumTracksInheritAlbumFields covers a rendering bug: tracks embedded in
+// an album response have no album object of their own, so without backfill
+// every track row on an album page lost its cover art and album name.
+func TestAlbumTracksInheritAlbumFields(t *testing.T) {
+	srv, _ := browseServer(t, map[string]string{
+		"album/get": fixture(t, "album.json"),
+	})
+
+	p := NewQobuzDirectProvider(srv.URL, testQobuzCredentials())
+	album, err := p.GetAlbum(context.Background(), "abc")
+	if err != nil {
+		t.Fatalf("GetAlbum failed: %v", err)
+	}
+	if len(album.Tracks) == 0 {
+		t.Fatal("no tracks parsed")
+	}
+
+	for i, track := range album.Tracks {
+		if track.AlbumArtURL == "" {
+			t.Errorf("track %d (%s) has no cover art", i, track.Title)
+		}
+		if track.Album == "" {
+			t.Errorf("track %d (%s) has no album name", i, track.Title)
+		}
+		if track.AlbumID == "" {
+			t.Errorf("track %d (%s) has no album id, so its album link is dead", i, track.Title)
+		}
+		if track.AlbumArtist == "" {
+			t.Errorf("track %d (%s) has no album artist", i, track.Title)
+		}
+	}
+}
