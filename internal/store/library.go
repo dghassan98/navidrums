@@ -11,21 +11,22 @@ import (
 // This table is a cache of what Navidrome reports and is never authoritative.
 // Nothing here is written back: the library is read-only to Navidrums.
 type LibraryTrack struct {
-	NavidromeID string `db:"navidrome_id"`
-	ISRC        string `db:"isrc"`
-	TitleKey    string `db:"title_key"`
-	ArtistKey   string `db:"artist_key"`
-	AlbumKey    string `db:"album_key"`
-	Title       string `db:"title"`
-	Artist      string `db:"artist"`
-	Album       string `db:"album"`
-	Suffix      string `db:"suffix"`
-	Path        string `db:"path"`
-	Year        int    `db:"year"`
-	Duration    int    `db:"duration"`
-	BitRate     int    `db:"bit_rate"`
-	BitDepth    int    `db:"bit_depth"`
-	Lossless    bool   `db:"lossless"`
+	NavidromeID      string `db:"navidrome_id"`
+	ISRC             string `db:"isrc"`
+	TitleKey         string `db:"title_key"`
+	ArtistKey        string `db:"artist_key"`
+	ArtistPrimaryKey string `db:"artist_primary_key"`
+	AlbumKey         string `db:"album_key"`
+	Title            string `db:"title"`
+	Artist           string `db:"artist"`
+	Album            string `db:"album"`
+	Suffix           string `db:"suffix"`
+	Path             string `db:"path"`
+	Year             int    `db:"year"`
+	Duration         int    `db:"duration"`
+	BitRate          int    `db:"bit_rate"`
+	BitDepth         int    `db:"bit_depth"`
+	Lossless         bool   `db:"lossless"`
 }
 
 // ReplaceLibraryTracks swaps the whole index for a freshly synced one.
@@ -47,11 +48,11 @@ func (db *DB) ReplaceLibraryTracks(tracks []LibraryTrack) error {
 
 	const insert = `
 		INSERT OR REPLACE INTO library_tracks (
-			navidrome_id, isrc, title_key, artist_key, album_key,
+			navidrome_id, isrc, title_key, artist_key, artist_primary_key, album_key,
 			title, artist, album, year, duration,
 			suffix, bit_rate, bit_depth, lossless, path, synced_at
 		) VALUES (
-			:navidrome_id, :isrc, :title_key, :artist_key, :album_key,
+			:navidrome_id, :isrc, :title_key, :artist_key, :artist_primary_key, :album_key,
 			:title, :artist, :album, :year, :duration,
 			:suffix, :bit_rate, :bit_depth, :lossless, :path, :synced_at
 		)`
@@ -130,10 +131,11 @@ func parseSQLiteTime(raw string) (time.Time, error) {
 // LibraryMatch is one library copy of a track, with just enough to judge
 // whether it is worth downloading again.
 type LibraryMatch struct {
-	ISRC      string `db:"isrc"`
-	TitleKey  string `db:"title_key"`
-	ArtistKey string `db:"artist_key"`
-	Lossless  bool   `db:"lossless"`
+	ISRC             string `db:"isrc"`
+	TitleKey         string `db:"title_key"`
+	ArtistKey        string `db:"artist_key"`
+	ArtistPrimaryKey string `db:"artist_primary_key"`
+	Lossless         bool   `db:"lossless"`
 }
 
 // FindLibraryMatches looks up library copies for a batch of tracks in two
@@ -144,7 +146,9 @@ func (db *DB) FindLibraryMatches(isrcs []string, titleKeys, artistKeys []string)
 
 	if len(isrcs) > 0 {
 		query, args, err := sqlx.In(
-			`SELECT isrc, title_key, artist_key, lossless FROM library_tracks
+			`SELECT isrc, title_key, artist_key,
+			        COALESCE(artist_primary_key, '') AS artist_primary_key, lossless
+			 FROM library_tracks
 			 WHERE isrc IS NOT NULL AND isrc <> '' AND isrc IN (?)`, isrcs)
 		if err != nil {
 			return nil, err
@@ -158,8 +162,12 @@ func (db *DB) FindLibraryMatches(isrcs []string, titleKeys, artistKeys []string)
 
 	if len(titleKeys) > 0 && len(artistKeys) > 0 {
 		query, args, err := sqlx.In(
-			`SELECT isrc, title_key, artist_key, lossless FROM library_tracks
-			 WHERE title_key IN (?) AND artist_key IN (?)`, titleKeys, artistKeys)
+			`SELECT isrc, title_key, artist_key,
+			        COALESCE(artist_primary_key, '') AS artist_primary_key, lossless
+			 FROM library_tracks
+			 WHERE title_key IN (?)
+			   AND (artist_key IN (?) OR artist_primary_key IN (?))`,
+			titleKeys, artistKeys, artistKeys)
 		if err != nil {
 			return nil, err
 		}

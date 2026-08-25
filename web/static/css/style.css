@@ -2145,3 +2145,35 @@ code {
     border-color: var(--accent, #2f855a);
     color: var(--text);
 }
+
+/* Per-track library state. "have" is deliberately muted and "upgrade" is
+   accented: the point of the row is deciding what to download, so the
+   actionable state is the one that should catch the eye. */
+.own-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.own-badge--have {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+}
+
+.own-badge--upgrade {
+    background: transparent;
+    border: 1px solid var(--accent, #c9a227);
+    color: var(--accent, #c9a227);
+}
+
+/* A track already held losslessly is the one row you can safely skip. */
+.item--owned .item-img {
+    opacity: 0.6;
+}

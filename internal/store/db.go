@@ -531,6 +531,25 @@ var migrations = []migration{
 			return nil
 		},
 	},
+	{
+		version:     19,
+		description: "Index library tracks by lead artist as well as full credit",
+		up: func(tx *sqlx.Tx) error {
+			// Sources credit collaborations differently: a library file tagged
+			// "Dua Lipa, Angèle" never matched a Qobuz "Dua Lipa". Keying on
+			// the lead artist too fixes every such track. Existing rows are
+			// left blank and filled by the next sync.
+			_, err := tx.Exec(
+				`ALTER TABLE library_tracks ADD COLUMN artist_primary_key TEXT`)
+			if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+				return err
+			}
+			_, err = tx.Exec(
+				`CREATE INDEX IF NOT EXISTS idx_library_title_primary
+				 ON library_tracks(title_key, artist_primary_key)`)
+			return err
+		},
+	},
 }
 
 type dbOps interface {

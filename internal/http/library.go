@@ -2,10 +2,15 @@ package httpapp
 
 import (
 	"context"
+	"fmt"
+	"html"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/cesargomez89/navidrums/internal/app"
+	"github.com/cesargomez89/navidrums/internal/domain"
 )
 
 // LibraryStatusHTMX renders the read-only library index panel in Settings.
@@ -88,4 +93,62 @@ func (h *Handler) libraryIndex() app.LibraryIndex {
 // request's own deadline semantics.
 func contextWithTimeout(r *http.Request, d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(r.Context(), d)
+}
+
+// DownloadMissingHTMX queues only the tracks of an album that the library does
+// not already hold.
+//
+// "Download Full Album" re-fetches everything, which for a library of
+// cherry-picked singles means repeatedly downloading tracks that are already
+// there. This queues the gap instead.
+func (h *Handler) DownloadMissingHTMX(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	album, err := h.ProviderManager.Provider().GetAlbum(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	index := h.libraryIndex()
+	if index == nil {
+		// Without a library index there is no "missing" to compute, and
+		// silently queuing everything would be a nasty surprise.
+		writeAlert(w, "alert-error", "No music library is configured, so missing tracks cannot be determined.")
+		return
+	}
+
+	if _, err := index.OwnershipFor(album.Tracks); err != nil {
+		h.Logger.Error("Ownership lookup failed", "album", id, "error", err)
+		writeAlert(w, "alert-error", "Could not check the library: "+err.Error())
+		return
+	}
+
+	queued, failed := 0, 0
+	for i := range album.Tracks {
+		if album.Tracks[i].Owned {
+			continue
+		}
+		if _, err := h.JobService.EnqueueJob(album.Tracks[i].ID, domain.JobTypeTrack); err != nil {
+			h.Logger.Error("Failed to queue missing track",
+				"album", id, "track", album.Tracks[i].ID, "error", err)
+			failed++
+			continue
+		}
+		queued++
+	}
+
+	switch {
+	case queued == 0 && failed == 0:
+		writeAlert(w, "alert-success", "You already have every track on this album.")
+	case failed > 0:
+		writeAlert(w, "alert-error",
+			fmt.Sprintf("Queued %d track(s); %d could not be queued.", queued, failed))
+	default:
+		writeAlert(w, "alert-success", fmt.Sprintf("Queued %d missing track(s).", queued))
+	}
+}
+
+func writeAlert(w http.ResponseWriter, class, message string) {
+	_, _ = fmt.Fprintf(w, "<div class='alert %s'>%s</div>", class, html.EscapeString(message))
 }

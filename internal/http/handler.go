@@ -71,6 +71,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/label/{id}", h.LabelPage)
 
 	r.Post("/htmx/download/{type}/{id}", h.DownloadHTMX)
+	r.Post("/htmx/album/{id}/download-missing", h.DownloadMissingHTMX)
 	r.Get("/queue", h.QueuePage)
 	r.Get("/htmx/queue/active", h.QueueActiveHTMX)
 	r.Get("/htmx/queue/history", h.QueueHistoryHTMX)

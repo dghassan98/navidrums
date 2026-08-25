@@ -173,6 +173,12 @@ func (t *Track) Normalize() {
 
 // CatalogTrack represents a track from the provider/catalog
 type CatalogTrack struct {
+	// Owned and OwnedLossless are view state, set from the library index so a
+	// track row can show what is already held. Never serialised: the catalog
+	// cache would otherwise persist one lookup's answer for every later one.
+	Owned         bool `json:"-"`
+	OwnedLossless bool `json:"-"`
+
 	KeyScale       string   `json:"key_scale,omitempty"`
 	Lyrics         string   `json:"lyrics,omitempty"`
 	ArtistID       string   `json:"artist_id,omitempty"`

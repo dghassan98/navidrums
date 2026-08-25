@@ -1,4 +1,4 @@
-<div class="item item-bordered">
+<div class="item item-bordered{{if .Owned}} item--owned{{end}}">
     <div class="item-media">
         <img src="{{img .AlbumArtURL}}"
             alt="{{.Title}}" class="item-img item-img--lg">
@@ -14,6 +14,13 @@
         </div>
     </div>
     <div class="item-actions item-actions--col">
+        {{if .Owned}}
+        {{if .OwnedLossless}}
+        <span class="own-badge own-badge--have" title="Already in your library, lossless">&#10003; have</span>
+        {{else}}
+        <span class="own-badge own-badge--upgrade" title="In your library, but lossy — downloading upgrades it">&#8593; upgrade</span>
+        {{end}}
+        {{end}}
         {{if eq .AudioQuality "HI_RES_LOSSLESS"}}
         <span class="quality-badge quality-badge--hires">HI-RES</span>
         {{else if eq .AudioQuality "LOSSLESS"}}

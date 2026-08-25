@@ -131,3 +131,45 @@ func (q OwnedQuality) String() string {
 		return "missing"
 	}
 }
+
+// artistSeparators split a credit string into individual artists. Sources
+// disagree about how to credit a collaboration: a library file is often tagged
+// "Dua Lipa, Angèle" while Qobuz lists "Dua Lipa" and puts the feature in the
+// title, so matching on the full credit alone misses every collaboration.
+var artistSeparators = []string{
+	" feat. ", " feat ", " featuring ", " ft. ", " ft ",
+	" with ", " & ", " x ", " vs. ", " vs ", ", ", "/", ";",
+}
+
+// PrimaryArtistKey is the normalised key of the first credited artist.
+//
+// It is a second, looser key used alongside the full-credit key, never instead
+// of it. Matching on the lead artist plus an exact title is specific enough to
+// be safe, while tolerating the credit styles differing between sources.
+func PrimaryArtistKey(artist string) string {
+	lowered := strings.ToLower(strings.TrimSpace(artist))
+
+	cut := len(lowered)
+	for _, sep := range artistSeparators {
+		if idx := strings.Index(lowered, sep); idx >= 0 && idx < cut {
+			cut = idx
+		}
+	}
+
+	primary := NormalizeMatchKey(lowered[:cut])
+
+	// A compilation credit is not an artist: matching on it would make every
+	// track on every compilation collide with every other.
+	if isGenericArtist(primary) {
+		return ""
+	}
+	return primary
+}
+
+func isGenericArtist(key string) bool {
+	switch key {
+	case "", "various artists", "various", "va", "unknown artist", "unknown", "soundtrack":
+		return true
+	}
+	return false
+}

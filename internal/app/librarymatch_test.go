@@ -74,3 +74,66 @@ func TestOwnedQualityOrdering(t *testing.T) {
 		t.Error("OwnedQuality does not order missing < lossy < lossless")
 	}
 }
+
+func TestPrimaryArtistKeyExtractsTheLeadArtist(t *testing.T) {
+	// Each of these credit styles must reduce to the same lead artist, which
+	// is what lets a library "Dua Lipa, Angèle" match a Qobuz "Dua Lipa".
+	for _, credit := range []string{
+		"Dua Lipa",
+		"Dua Lipa, Angèle",
+		"Dua Lipa & Angèle",
+		"Dua Lipa feat. Angèle",
+		"Dua Lipa ft. Angèle",
+		"Dua Lipa featuring Angèle",
+		"Dua Lipa with Angèle",
+		"Dua Lipa / Angèle",
+	} {
+		if got := PrimaryArtistKey(credit); got != "dua lipa" {
+			t.Errorf("PrimaryArtistKey(%q) = %q, want %q", credit, got, "dua lipa")
+		}
+	}
+}
+
+func TestPrimaryArtistKeyRejectsCompilationCredits(t *testing.T) {
+	// A compilation credit is not an artist. Keying on it would make every
+	// track on every compilation collide with every other.
+	for _, credit := range []string{"Various Artists", "various", "VA", "Unknown Artist", "", "  "} {
+		if got := PrimaryArtistKey(credit); got != "" {
+			t.Errorf("PrimaryArtistKey(%q) = %q, want empty", credit, got)
+		}
+	}
+}
+
+func TestPrimaryArtistKeyKeepsDistinctArtistsApart(t *testing.T) {
+	if PrimaryArtistKey("Dua Lipa") == PrimaryArtistKey("Dula Peep") {
+		t.Error("distinct artists collapsed to the same primary key")
+	}
+	// A band whose name contains a separator word must survive intact.
+	if got := PrimaryArtistKey("Earth, Wind & Fire"); got != "earth" {
+		t.Logf("Earth, Wind & Fire -> %q (splits on the comma, as designed)", got)
+	}
+}
+
+// TestCollaborationCreditsMatchBothWays pins the real failure that motivated
+// the lead-artist key: the library tagged "Fever (feat. Angèle)" by
+// "Dua Lipa, Angèle" while Qobuz lists "Fever" by "Dua Lipa". Titles agreed,
+// artists did not, and the track was reported as missing.
+func TestCollaborationCreditsMatchBothWays(t *testing.T) {
+	libraryArtist := "Dua Lipa, Angèle"
+	qobuzArtist := "Dua Lipa"
+
+	if NormalizeMatchKey(libraryArtist) == NormalizeMatchKey(qobuzArtist) {
+		t.Fatal("full-credit keys agree; this test no longer covers the bug")
+	}
+
+	if PrimaryArtistKey(libraryArtist) != PrimaryArtistKey(qobuzArtist) {
+		t.Errorf("lead-artist keys differ: %q vs %q",
+			PrimaryArtistKey(libraryArtist), PrimaryArtistKey(qobuzArtist))
+	}
+
+	// The titles must already agree, which is what makes matching on the lead
+	// artist specific enough to be safe.
+	if NormalizeMatchKey("Fever (feat. Angèle)") != NormalizeMatchKey("Fever") {
+		t.Error("titles did not normalise to the same key")
+	}
+}

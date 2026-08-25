@@ -104,3 +104,24 @@ func TestUnconfiguredLibraryServiceIsInert(t *testing.T) {
 		t.Errorf("owned = %+v, want zero", owned)
 	}
 }
+
+func TestAlbumOwnershipMissing(t *testing.T) {
+	tests := []struct {
+		owned AlbumOwnership
+		want  int
+	}{
+		{AlbumOwnership{Owned: 5, Total: 13}, 8},
+		{AlbumOwnership{Owned: 0, Total: 13}, 13},
+		{AlbumOwnership{Owned: 13, Total: 13}, 0},
+		// Defensive: a match count above the tracklist must not go negative
+		// and offer to download minus-one tracks.
+		{AlbumOwnership{Owned: 15, Total: 13}, 0},
+		{AlbumOwnership{}, 0},
+	}
+
+	for _, tt := range tests {
+		if got := tt.owned.Missing(); got != tt.want {
+			t.Errorf("%+v Missing() = %d, want %d", tt.owned, got, tt.want)
+		}
+	}
+}

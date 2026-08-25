@@ -135,21 +135,22 @@ func (s *LibraryService) setErr(err error) {
 
 func toLibraryTrack(song subsonic.Song) store.LibraryTrack {
 	return store.LibraryTrack{
-		NavidromeID: song.ID,
-		ISRC:        song.ISRC,
-		TitleKey:    NormalizeMatchKey(song.Title),
-		ArtistKey:   NormalizeMatchKey(song.Artist),
-		AlbumKey:    NormalizeMatchKey(song.Album),
-		Title:       song.Title,
-		Artist:      song.Artist,
-		Album:       song.Album,
-		Year:        song.Year,
-		Duration:    song.Duration,
-		Suffix:      song.Suffix,
-		BitRate:     song.BitRate,
-		BitDepth:    song.BitDepth,
-		Lossless:    song.Lossless,
-		Path:        song.Path,
+		NavidromeID:      song.ID,
+		ISRC:             song.ISRC,
+		TitleKey:         NormalizeMatchKey(song.Title),
+		ArtistKey:        NormalizeMatchKey(song.Artist),
+		ArtistPrimaryKey: PrimaryArtistKey(song.Artist),
+		AlbumKey:         NormalizeMatchKey(song.Album),
+		Title:            song.Title,
+		Artist:           song.Artist,
+		Album:            song.Album,
+		Year:             song.Year,
+		Duration:         song.Duration,
+		Suffix:           song.Suffix,
+		BitRate:          song.BitRate,
+		BitDepth:         song.BitDepth,
+		Lossless:         song.Lossless,
+		Path:             song.Path,
 	}
 }
 
@@ -158,6 +159,14 @@ type AlbumOwnership struct {
 	Owned    int
 	Total    int
 	Lossless int
+}
+
+// Missing is how many tracks are not held at all.
+func (a AlbumOwnership) Missing() int {
+	if a.Total <= a.Owned {
+		return 0
+	}
+	return a.Total - a.Owned
 }
 
 // Complete reports whether every track is present.
@@ -174,7 +183,8 @@ type LibraryIndex interface {
 	OwnershipFor(tracks []domain.CatalogTrack) (AlbumOwnership, error)
 }
 
-// OwnershipFor matches a catalog album's tracks against the library.
+// OwnershipFor matches a catalog album's tracks against the library, and marks
+// each track in place so callers can render per-track state.
 //
 // ISRC is trusted outright. Everything else falls back to normalised title and
 // artist, which is why NormalizeMatchKey errs toward keeping distinct tracks
@@ -194,6 +204,9 @@ func (s *LibraryService) OwnershipFor(tracks []domain.CatalogTrack) (AlbumOwners
 		}
 		titleKeys = append(titleKeys, NormalizeMatchKey(tracks[i].Title))
 		artistKeys = append(artistKeys, NormalizeMatchKey(tracks[i].Artist))
+		if primary := PrimaryArtistKey(tracks[i].Artist); primary != "" {
+			artistKeys = append(artistKeys, primary)
+		}
 	}
 
 	rows, err := s.db.FindLibraryMatches(isrcs, titleKeys, artistKeys)
@@ -207,8 +220,16 @@ func (s *LibraryService) OwnershipFor(tracks []domain.CatalogTrack) (AlbumOwners
 		if row.ISRC != "" {
 			byISRC[row.ISRC] = byISRC[row.ISRC] || row.Lossless
 		}
-		key := row.TitleKey + "\x00" + row.ArtistKey
-		byName[key] = byName[key] || row.Lossless
+		// Index under both the full credit and the lead artist, so either
+		// side's credit style can find the other. A library file tagged
+		// "Dua Lipa, Angèle" has to be findable from a Qobuz "Dua Lipa".
+		for _, artistKey := range []string{row.ArtistKey, row.ArtistPrimaryKey} {
+			if artistKey == "" {
+				continue
+			}
+			key := row.TitleKey + "\x00" + artistKey
+			byName[key] = byName[key] || row.Lossless
+		}
 	}
 
 	for i := range tracks {
@@ -220,11 +241,25 @@ func (s *LibraryService) OwnershipFor(tracks []domain.CatalogTrack) (AlbumOwners
 			}
 		}
 		if !found {
-			key := NormalizeMatchKey(tracks[i].Title) + "\x00" + NormalizeMatchKey(tracks[i].Artist)
-			if l, ok := byName[key]; ok {
-				found, lossless = true, l
+			titleKey := NormalizeMatchKey(tracks[i].Title)
+			for _, artistKey := range []string{
+				NormalizeMatchKey(tracks[i].Artist),
+				PrimaryArtistKey(tracks[i].Artist),
+			} {
+				if artistKey == "" {
+					continue
+				}
+				if l, ok := byName[titleKey+"\x00"+artistKey]; ok {
+					found, lossless = true, l
+					break
+				}
 			}
 		}
+
+		// Mark the track itself so the album page can show which ones are
+		// held, not just how many.
+		tracks[i].Owned = found
+		tracks[i].OwnedLossless = found && lossless
 
 		if found {
 			out.Owned++
