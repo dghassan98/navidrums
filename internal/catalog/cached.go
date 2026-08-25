@@ -36,6 +36,21 @@ func NewCachedProvider(provider Provider, cache Cache, cacheTTL time.Duration) *
 // with entries left behind by the providers that were removed.
 const cacheKeyPrefix = "qobuz-direct:"
 
+// cacheSchemaVersion invalidates every cached entry when the shape of what is
+// cached changes.
+//
+// Entries are stored as marshalled domain objects, so adding a field that the
+// converters now populate does not fix already-cached responses: a rebuilt
+// binary keeps serving the old JSON until the TTL expires. That has bitten
+// twice — album label/genre IDs, then track cover art — each time looking like
+// the fix had not worked.
+//
+// Bump this whenever a converter starts populating a field that is cached.
+//
+//	v1 - initial
+//	v2 - album tracks inherit album id, name, artist and cover art
+const cacheSchemaVersion = "v2"
+
 // Browse responses age very differently from catalog lookups, so they carry
 // their own TTLs rather than the configured default.
 const (
@@ -45,7 +60,7 @@ const (
 )
 
 func (c *CachedProvider) key(format string, args ...any) string {
-	return cacheKeyPrefix + fmt.Sprintf(format, args...)
+	return cacheKeyPrefix + cacheSchemaVersion + ":" + fmt.Sprintf(format, args...)
 }
 
 // cached runs fetch through the cache under key, decoding into T. A cache miss,

@@ -3,6 +3,7 @@ package catalog
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,5 +135,25 @@ func TestCachedProvider_AllMethods(t *testing.T) {
 				t.Errorf("%s: expected cache hit (1 call total), got %d", tt.name, inner.searchCalled)
 			}
 		})
+	}
+}
+
+// TestCacheKeysCarryTheSchemaVersion guards against a class of bug that has
+// already happened twice: a converter starts populating a new field, but
+// already-cached entries keep serving the old shape after a rebuild, so the fix
+// appears not to work. Bumping the schema version must change every key.
+func TestCacheKeysCarryTheSchemaVersion(t *testing.T) {
+	cp := NewCachedProvider(&mockProvider{}, &mockCache{}, time.Hour)
+
+	key := cp.key("album:%s", "abc")
+
+	if !strings.Contains(key, cacheSchemaVersion) {
+		t.Errorf("key %q does not carry the schema version %q", key, cacheSchemaVersion)
+	}
+	if !strings.HasPrefix(key, cacheKeyPrefix) {
+		t.Errorf("key %q lost the provider prefix", key)
+	}
+	if !strings.HasSuffix(key, "album:abc") {
+		t.Errorf("key %q lost the entry identity", key)
 	}
 }
