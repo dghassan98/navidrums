@@ -1922,14 +1922,10 @@ textarea {
         justify-content: center;
     }
 
-    /* Discover rows on a phone. The desktop 200px card fills a ~380px
-       viewport, which turns a scrolling row into one card at a time and hides
-       that the row scrolls at all. 140px shows two and a half, so the cut-off
-       card advertises the swipe. */
-    .discover-row .list-grid {
-        display: flex !important;
-        grid-template-columns: none !important;
-        overflow-x: auto !important;
+    /* Discover rows on a phone. A 176px card leaves barely one and a half on
+       a ~380px viewport, which hides that the row scrolls at all. 140px plus
+       an edge-to-edge bleed shows a cut-off card that advertises the swipe. */
+    .discover-grid {
         gap: 10px;
         /* Let the row bleed to the screen edges so the last card is clearly
            cut off rather than looking like the end of the list. */
@@ -1938,16 +1934,14 @@ textarea {
         scroll-padding-inline: 16px;
     }
 
-    .discover-row .list-grid > .card {
-        flex: 0 0 140px !important;
-        width: 140px !important;
-        max-width: 140px !important;
+    .discover-grid > .card {
+        flex: 0 0 140px;
         min-width: 0;
         padding: 8px;
     }
 
-    .discover-row .list-grid > .card .card-sub,
-    .discover-row .list-grid > .card .card-meta {
+    .discover-grid > .card .card-sub,
+    .discover-grid > .card .card-meta {
         -webkit-line-clamp: 1;
         line-clamp: 1;
     }
@@ -2095,9 +2089,11 @@ code {
     pointer-events: none;
 }
 
-/* Rows scroll sideways rather than wrapping, so a row stays one row. The
-   grid default (400px columns) would reflow a row into a wall of cards. */
-.discover-row .list-grid {
+/* A Discover row is its own thing, not a .list-grid. .list-grid is sized for
+   wide track rows (400px columns); reusing it here meant fighting that rule
+   with overrides. Cards match the recommendations grid (160px) but a little
+   wider, and the row scrolls sideways instead of wrapping. */
+.discover-grid {
     display: flex;
     gap: 16px;
     overflow-x: auto;
@@ -2106,20 +2102,19 @@ code {
     scroll-snap-type: x proximity;
 }
 
-.discover-row .list-grid > .card {
-    flex: 0 0 200px;
+.discover-grid > .card {
+    flex: 0 0 176px;
     scroll-snap-align: start;
 }
 
-/* Cards in a row are only as tall as the shortest useful card: the cover, a
-   title and a two line subtitle. Without this a single long editorial
-   description sets the height for the whole row. */
-.discover-row .list-grid > .card .card-sub {
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+/* Without this a single long editorial description sets the height for the
+   whole row. */
+.discover-grid > .card .card-sub {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
 }
 
-.discover-row .list-grid > .card img {
+.discover-grid > .card img {
     aspect-ratio: 1 / 1;
     object-fit: cover;
     width: 100%;

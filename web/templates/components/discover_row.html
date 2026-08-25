@@ -4,13 +4,13 @@
     {{if .Message}}
     <p class="text-sm text-muted">{{.Message}}</p>
     {{else if .Playlists}}
-    <div class="list-grid">
+    <div class="discover-grid">
         {{range .Playlists}}
         {{template "playlist_card.html" .}}
         {{end}}
     </div>
     {{else if .Albums}}
-    <div class="list-grid">
+    <div class="discover-grid">
         {{range .Albums}}
         {{template "album_card.html" .}}
         {{end}}

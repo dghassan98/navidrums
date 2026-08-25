@@ -169,6 +169,9 @@ func (h *Handler) RenderPage(w http.ResponseWriter, pageTmpl string, data interf
 
 	// Inject global theme if not already set in data
 	if m, ok := data.(map[string]interface{}); ok {
+		if _, exists := m["AssetVersion"]; !exists {
+			m["AssetVersion"] = AssetVersion()
+		}
 		if _, exists := m["Theme"]; !exists {
 			theme := ""
 			if h.SettingsRepo != nil {

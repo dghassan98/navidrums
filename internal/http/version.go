@@ -4,11 +4,36 @@ import (
 	"encoding/json"
 	"net/http"
 	"runtime/debug"
+	"strconv"
+	"time"
 )
 
 // buildVersion is stamped at build time with -ldflags "-X ...buildVersion=...".
 // Left empty it falls back to VCS data the Go toolchain embeds automatically.
 var buildVersion string
+
+// AssetVersion is appended to static asset URLs so a new build invalidates a
+// browser's cached copy. Without it, server-rendered HTML updates while the
+// stylesheet stays stale, which looks like CSS changes silently doing nothing.
+func AssetVersion() string {
+	info := currentBuildInfo()
+	if info.Commit != "" {
+		if len(info.Commit) > 12 {
+			return info.Commit[:12]
+		}
+		return info.Commit
+	}
+	if info.Version != "" && info.Version != "unknown" {
+		return info.Version
+	}
+	// A dev build with no VCS stamp. "unknown" would be a constant and cache
+	// forever, which is the exact failure this exists to prevent, so fall back
+	// to process start: a restart is then enough to pick up edits.
+	return startedAt
+}
+
+// startedAt changes every run, which is the right granularity for a dev build.
+var startedAt = strconv.FormatInt(time.Now().Unix(), 10)
 
 // BuildInfo identifies the running binary, so a deployment can be checked
 // against the repository without guessing.

@@ -23,6 +23,7 @@ func (h *Handler) SearchPage(w http.ResponseWriter, r *http.Request) {
 	h.RenderPage(w, "index.html", map[string]interface{}{
 		"ActivePage": "search",
 		"Rows":       h.enabledDiscoverRows(),
+		"GenreID":    r.URL.Query().Get("genre_id"),
 	})
 }
 
