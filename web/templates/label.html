@@ -2,7 +2,7 @@
 <h1>{{.Label.Name}}</h1>
 <p class="text-sm text-muted mb-4">
     {{.Label.AlbumsCount}} albums
-    {{if .Label.Description}}&middot; {{.Label.Description}}{{end}}
+    {{if .Label.Description}}&middot; {{plain .Label.Description}}{{end}}
 </p>
 
 <div class="toolbar-row mb-6">

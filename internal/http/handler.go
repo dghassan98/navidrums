@@ -159,9 +159,21 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/htmx/languages", h.GetLanguagesHTMX)
 }
 
+// templateFuncs is the single definition of what templates may call.
+//
+// It is shared with the parse test rather than duplicated: when the test kept
+// its own copy, adding a function here made every template fail to parse in
+// production while the test still passed against its stale map.
+func templateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"join":  strings.Join,
+		"img":   ProxiedImageURL,
+		"plain": PlainText,
+	}
+}
+
 func (h *Handler) RenderPage(w http.ResponseWriter, pageTmpl string, data interface{}) {
-	// Register template functions before parsing
-	tmpl := template.New("base").Funcs(template.FuncMap{"join": strings.Join, "img": ProxiedImageURL})
+	tmpl := template.New("base").Funcs(templateFuncs())
 	tmpl, err := tmpl.ParseFS(web.Files,
 		"templates/base.html",
 		"templates/"+pageTmpl,
@@ -198,8 +210,7 @@ func (h *Handler) RenderPage(w http.ResponseWriter, pageTmpl string, data interf
 func (h *Handler) RenderFragment(w http.ResponseWriter, fragTmpl string, data interface{}) {
 	patterns := []string{"templates/components/*.html", "templates/" + fragTmpl}
 
-	// Register functions before parsing
-	tmpl := template.New("frag").Funcs(template.FuncMap{"join": strings.Join, "img": ProxiedImageURL})
+	tmpl := template.New("frag").Funcs(templateFuncs())
 	tmpl, err := tmpl.ParseFS(web.Files, patterns...)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

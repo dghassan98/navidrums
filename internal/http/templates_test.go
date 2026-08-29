@@ -3,7 +3,6 @@ package httpapp
 import (
 	"html/template"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/cesargomez89/navidrums/web"
@@ -20,10 +19,7 @@ func TestTemplatesParse(t *testing.T) {
 	for _, page := range pages {
 		name := filepath.Base(page)
 		t.Run(name, func(t *testing.T) {
-			tmpl := template.New("base").Funcs(template.FuncMap{
-				"join": strings.Join,
-				"img":  ProxiedImageURL,
-			})
+			tmpl := template.New("base").Funcs(templateFuncs())
 			patterns := []string{
 				"templates/base.html",
 				"templates/" + name,
