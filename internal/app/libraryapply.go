@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/cesargomez89/navidrums/internal/store"
 	"github.com/cesargomez89/navidrums/internal/tagging"
@@ -22,12 +24,84 @@ var ErrWriteDisabled = errors.New("writing to the library is disabled; set NAVID
 var ErrNoLibraryMount = errors.New("the music library is not mounted; set LIBRARY_MOUNT to where it is mounted in this container")
 
 // LibraryApplyService writes approved tag fixes to the files.
+//
+// Runs are performed in the background. Writing tags means reading each file,
+// rewriting it and reading it back, and for some formats shelling out to
+// ffmpeg — far too slow to hold an HTTP request open, which is how the first
+// version appeared to hang.
 type LibraryApplyService struct {
 	db           *store.DB
 	logger       *slog.Logger
 	mount        string
 	sourcePrefix string
 	enabled      bool
+
+	mu       sync.Mutex
+	running  bool
+	progress ApplyProgress
+	report   *ApplyReport
+}
+
+// ApplyProgress is what the panel polls while a run is under way.
+type ApplyProgress struct {
+	Current   string
+	StartedAt time.Time
+	Done      int
+	Total     int
+	Changed   int
+	Failed    int
+	Running   bool
+}
+
+// ErrApplyRunning reports a second run starting while one is in flight.
+var ErrApplyRunning = errors.New("a library apply is already running")
+
+// Progress reports the state of the current or last run.
+func (s *LibraryApplyService) Progress() (ApplyProgress, *ApplyReport) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p := s.progress
+	p.Running = s.running
+	return p, s.report
+}
+
+// Start begins a run in the background and returns immediately.
+func (s *LibraryApplyService) Start(limit int, dryRun bool) error {
+	if !dryRun && !s.enabled {
+		return ErrWriteDisabled
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	s.mu.Lock()
+	if s.running {
+		s.mu.Unlock()
+		return ErrApplyRunning
+	}
+	s.running = true
+	s.progress = ApplyProgress{StartedAt: time.Now()}
+	s.report = nil
+	s.mu.Unlock()
+
+	go func() {
+		report, err := s.Apply(limit, dryRun)
+
+		s.mu.Lock()
+		s.running = false
+		if err != nil && report == nil {
+			report = &ApplyReport{DryRun: dryRun}
+			report.RescanError = err.Error()
+		}
+		s.report = report
+		s.mu.Unlock()
+
+		if err != nil && s.logger != nil {
+			s.logger.Error("Library apply failed", "error", err)
+		}
+	}()
+
+	return nil
 }
 
 func NewLibraryApplyService(db *store.DB, mount, sourcePrefix string, enabled bool, logger *slog.Logger) *LibraryApplyService {
@@ -109,7 +183,16 @@ func (s *LibraryApplyService) Apply(limit int, dryRun bool) (*ApplyReport, error
 	}
 
 	report := &ApplyReport{DryRun: dryRun, Files: len(files)}
+
+	s.mu.Lock()
+	s.progress.Total = len(files)
+	s.mu.Unlock()
+
 	for i := range files {
+		s.mu.Lock()
+		s.progress.Current = files[i].Title
+		s.mu.Unlock()
+
 		outcome := s.applyOne(files[i], dryRun)
 		report.Outcomes = append(report.Outcomes, outcome)
 
@@ -120,6 +203,12 @@ func (s *LibraryApplyService) Apply(limit int, dryRun bool) (*ApplyReport, error
 			report.Changed++
 			report.FieldsSet += len(outcome.Applied)
 		}
+
+		s.mu.Lock()
+		s.progress.Done = i + 1
+		s.progress.Changed = report.Changed
+		s.progress.Failed = report.Failed
+		s.mu.Unlock()
 	}
 
 	if s.logger != nil {

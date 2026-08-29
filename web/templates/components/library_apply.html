@@ -57,21 +57,28 @@
 </div>
 {{end}}
 
-<div class="toolbar-row mt-4" hx-indicator="#apply-working" hx-disabled-elt="find button">
+<div class="toolbar-row mt-4">
     <button class="btn btn-outline" hx-post="/htmx/library-apply?limit=20&dry=1"
-        hx-target="#library-apply" hx-swap="innerHTML">Dry run (20 files)</button>
+        hx-target="#library-apply" hx-swap="innerHTML" {{if .Running}}disabled{{end}}>Dry run (20 files)</button>
     <button class="btn btn-primary" hx-post="/htmx/library-apply?limit=20&dry=0"
         hx-target="#library-apply" hx-swap="innerHTML"
         hx-confirm="Write tags to 20 files? Original values are backed up first."
-        {{if not .Enabled}}disabled{{end}}>Apply 20 files</button>
+        {{if or (not .Enabled) .Running}}disabled{{end}}>Apply 20 files</button>
     <button class="btn btn-primary" hx-post="/htmx/library-apply?limit=500&dry=0"
         hx-target="#library-apply" hx-swap="innerHTML"
         hx-confirm="Write tags to up to 500 files? Do this only after checking a small batch."
-        {{if not .Enabled}}disabled{{end}}>Apply up to 500</button>
+        {{if or (not .Enabled) .Running}}disabled{{end}}>Apply up to 500</button>
 </div>
 
-<div id="apply-working" class="htmx-indicator alert alert-warning mt-4">
-    <strong>Working&hellip;</strong> reading each file, writing tags and reading them back to
-    confirm. Large batches take a while &mdash; leave this page open.
+{{if .Running}}
+<div class="alert alert-warning mt-4"
+    hx-get="/htmx/library-apply" hx-trigger="every 2s" hx-target="#library-apply" hx-swap="innerHTML">
+    <strong>Working&hellip;</strong>
+    {{.Progress.Done}} of {{.Progress.Total}}{{if .Percent}} ({{.Percent}}%){{end}}
+    {{if .Progress.Current}}&mdash; {{.Progress.Current}}{{end}}
+    <br>
+    <span class="text-sm">{{.Progress.Changed}} changed{{if .Progress.Failed}},
+        {{.Progress.Failed}} failed{{end}}. You can leave this page; the run continues.</span>
 </div>
+{{end}}
 {{end}}

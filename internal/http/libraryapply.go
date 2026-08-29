@@ -1,6 +1,8 @@
 package httpapp
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -9,7 +11,7 @@ import (
 
 // LibraryApplyStatusHTMX renders the apply panel.
 func (h *Handler) LibraryApplyStatusHTMX(w http.ResponseWriter, r *http.Request) {
-	h.RenderFragment(w, "components/library_apply.html", h.applyView(nil))
+	h.RenderFragment(w, "components/library_apply.html", h.applyView())
 }
 
 // LibraryApplyHTMX applies approved changes, or reports what it would do.
@@ -19,7 +21,7 @@ func (h *Handler) LibraryApplyStatusHTMX(w http.ResponseWriter, r *http.Request)
 // on the rest.
 func (h *Handler) LibraryApplyHTMX(w http.ResponseWriter, r *http.Request) {
 	if h.LibraryApply == nil {
-		h.RenderFragment(w, "components/library_apply.html", h.applyView(nil))
+		h.RenderFragment(w, "components/library_apply.html", h.applyView())
 		return
 	}
 
@@ -31,31 +33,22 @@ func (h *Handler) LibraryApplyHTMX(w http.ResponseWriter, r *http.Request) {
 	}
 	dryRun := r.URL.Query().Get("dry") != "0"
 
-	report, err := h.LibraryApply.Apply(limit, dryRun)
-	if err != nil {
-		h.Logger.Error("Library apply failed", "error", err)
-		view := h.applyView(nil)
+	// Started in the background and answered immediately: writing tags to
+	// twenty files takes far longer than a request should be held open, which
+	// is why the first version looked like it had frozen.
+	if err := h.LibraryApply.Start(limit, dryRun); err != nil &&
+		!errors.Is(err, app.ErrApplyRunning) {
+		h.Logger.Error("Could not start the library apply", "error", err)
+		view := h.applyView()
 		view["Error"] = err.Error()
 		h.RenderFragment(w, "components/library_apply.html", view)
 		return
 	}
 
-	// A rescan only matters when files actually changed, and only after a real
-	// run: without it the music server keeps serving the old tags and the work
-	// looks like it did nothing.
-	if !dryRun && report.Changed > 0 && h.LibraryService != nil {
-		if err := h.LibraryService.TriggerRescan(r.Context()); err != nil {
-			h.Logger.Error("Could not trigger a library rescan", "error", err)
-			report.RescanError = err.Error()
-		} else {
-			report.Rescanned = true
-		}
-	}
-
-	h.RenderFragment(w, "components/library_apply.html", h.applyView(report))
+	h.RenderFragment(w, "components/library_apply.html", h.applyView())
 }
 
-func (h *Handler) applyView(report *app.ApplyReport) map[string]interface{} {
+func (h *Handler) applyView() map[string]interface{} {
 	view := map[string]interface{}{}
 
 	if h.LibraryApply != nil {
@@ -72,8 +65,29 @@ func (h *Handler) applyView(report *app.ApplyReport) map[string]interface{} {
 		}
 	}
 
-	if report != nil {
-		view["Report"] = report
+	if h.LibraryApply != nil {
+		progress, report := h.LibraryApply.Progress()
+		view["Running"] = progress.Running
+		view["Progress"] = progress
+		if progress.Total > 0 {
+			view["Percent"] = progress.Done * 100 / progress.Total
+		}
+
+		// The rescan is triggered once, when a run that changed something has
+		// finished — not per file, and never for a dry run.
+		if report != nil && !report.DryRun && report.Changed > 0 &&
+			!report.Rescanned && report.RescanError == "" && h.LibraryService != nil {
+			if err := h.LibraryService.TriggerRescan(context.Background()); err != nil {
+				h.Logger.Error("Could not trigger a library rescan", "error", err)
+				report.RescanError = err.Error()
+			} else {
+				report.Rescanned = true
+			}
+		}
+
+		if report != nil {
+			view["Report"] = report
+		}
 	}
 	return view
 }

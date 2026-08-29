@@ -133,7 +133,7 @@ func patchViaFFmpeg(path string, changes map[string]string) error {
 		mapped[ffmpegNames[field]] = value
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 
 	return ffmpeg.PatchMetadata(ctx, path, mapped)
