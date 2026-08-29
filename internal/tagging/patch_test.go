@@ -250,3 +250,37 @@ func TestOpusAndM4AGoThroughFFmpeg(t *testing.T) {
 		}
 	}
 }
+
+// TestFLACFallsBackWhenTheDirectoryIsReadOnly covers the failure seen on the
+// real library: MP3s succeeded while FLACs in the same tree failed with
+// "permission denied", because creating a temporary file needs write
+// permission on the directory while editing an MP3 in place does not.
+func TestFLACFallsBackWhenTheDirectoryIsReadOnly(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root, which ignores directory permissions")
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "song.flac")
+	writeTestFLAC(t, path, map[string]string{
+		"TITLE": "Old", "COMMENT": "keep me",
+	})
+
+	// The file stays writable; the directory does not accept new entries.
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Skipf("cannot make the directory read-only here: %v", err)
+	}
+	defer func() { _ = os.Chmod(dir, 0o700) }()
+
+	if err := PatchTags(path, map[string]string{PatchTitle: "New"}); err != nil {
+		t.Fatalf("PatchTags should have fallen back to an in-place write: %v", err)
+	}
+
+	after := readAllFLACComments(t, path)
+	if after["TITLE"] != "New" {
+		t.Errorf("TITLE = %q, want New", after["TITLE"])
+	}
+	if after["COMMENT"] != "keep me" {
+		t.Errorf("COMMENT = %q; unrelated tags must survive the fallback too", after["COMMENT"])
+	}
+}

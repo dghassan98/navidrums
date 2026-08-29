@@ -136,6 +136,14 @@ func patchViaFFmpeg(path string, changes map[string]string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 
+	// Refuse rather than quietly discard artwork. ffmpeg cannot write an
+	// embedded picture back into an Ogg or Opus file, so retagging one would
+	// return a valid file that has silently lost its cover.
+	hasPicture, probeErr := ffmpeg.HasNonAudioStream(ctx, path)
+	if probeErr == nil && hasPicture {
+		return fmt.Errorf("%w: %s", ffmpeg.ErrAttachedPicture, filepath.Base(path))
+	}
+
 	return ffmpeg.PatchMetadata(ctx, path, mapped)
 }
 
@@ -229,18 +237,70 @@ func patchFLAC(path string, changes map[string]string) error {
 // saveFLACAtomically writes to a temporary file beside the original and renames
 // it into place, so an interrupted write cannot leave a half-written file where
 // the music used to be.
+//
+// Creating that temporary file needs write permission on the *directory*, which
+// a library may not grant even when the files themselves are writable — that is
+// why MP3s succeed while FLACs fail with "permission denied" in the same tree.
+// When the directory refuses, the content is staged outside and written over the
+// original instead, which needs only the file to be writable.
 func saveFLACAtomically(f *flac.File, path string) error {
 	temp := path + ".navidrums.tmp"
 
-	if err := f.Save(temp); err != nil {
-		_ = os.Remove(temp)
+	err := f.Save(temp)
+	if err == nil {
+		if renameErr := os.Rename(temp, path); renameErr != nil {
+			_ = os.Remove(temp)
+			return fmt.Errorf("could not replace FLAC: %w", renameErr)
+		}
+		return nil
+	}
+
+	_ = os.Remove(temp)
+	if !errors.Is(err, os.ErrPermission) {
 		return fmt.Errorf("could not write FLAC: %w", err)
 	}
-	if err := os.Rename(temp, path); err != nil {
-		_ = os.Remove(temp)
-		return fmt.Errorf("could not replace FLAC: %w", err)
+
+	return saveFLACInPlace(f, path)
+}
+
+// saveFLACInPlace stages the file somewhere writable and copies it over the
+// original.
+//
+// This gives up the atomicity of a rename: the original is truncated before the
+// new content lands, so an interruption here damages the file. It is the only
+// way to write into a directory that cannot be added to, and it is used only
+// when the atomic path has already been refused.
+func saveFLACInPlace(f *flac.File, path string) error {
+	staged, err := os.CreateTemp("", "navidrums-*.flac")
+	if err != nil {
+		return fmt.Errorf("could not stage FLAC: %w", err)
 	}
-	return nil
+	stagedName := staged.Name()
+	_ = staged.Close()
+	defer func() { _ = os.Remove(stagedName) }()
+
+	if err := f.Save(stagedName); err != nil {
+		return fmt.Errorf("could not write FLAC: %w", err)
+	}
+
+	content, err := os.ReadFile(stagedName) //nolint:gosec // path is ours
+	if err != nil {
+		return fmt.Errorf("could not read the staged FLAC: %w", err)
+	}
+
+	// Opened without O_CREATE: this must overwrite the existing file, never
+	// create a new one, since creating is exactly what was refused.
+	dst, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0) //nolint:gosec // caller supplies the library path
+	if err != nil {
+		return fmt.Errorf("could not open the FLAC for writing "+
+			"(its directory is not writable either): %w", err)
+	}
+	defer func() { _ = dst.Close() }()
+
+	if _, err := dst.Write(content); err != nil {
+		return fmt.Errorf("could not overwrite the FLAC: %w", err)
+	}
+	return dst.Sync()
 }
 
 // ── MP3 ──────────────────────────────────────────────────────────────────────

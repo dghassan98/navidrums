@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -139,7 +140,15 @@ func (s *LibraryService) TriggerRescan(ctx context.Context) error {
 	if !s.Configured() {
 		return subsonic.ErrNotConfigured
 	}
-	return s.client.StartScan(ctx)
+
+	err := s.client.StartScan(ctx)
+	if err != nil && strings.Contains(err.Error(), "not authorized") {
+		// Navidrome only lets administrators start a scan. Nothing else here
+		// needs that, so the account is otherwise correctly unprivileged.
+		return fmt.Errorf("%w — starting a scan requires an admin account in "+
+			"Navidrome; either grant this user admin or rescan manually", err)
+	}
+	return err
 }
 
 func toLibraryTrack(song subsonic.Song) store.LibraryTrack {
