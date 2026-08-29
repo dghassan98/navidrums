@@ -26,8 +26,8 @@ func Capabilities() []FormatSupport {
 	ffmpegOK, ffmpegWhy := ffmpegAvailable()
 	ffprobeOK, ffprobeWhy := binaryAvailable("ffprobe")
 
-	native := []string{".flac", ".mp3"}
-	viaFFmpeg := []string{".opus", ".ogg", ".m4a", ".mp4", ".aac"}
+	native := []string{".flac", ".mp3", ".opus", ".ogg"}
+	viaFFmpeg := []string{".m4a", ".mp4", ".aac"}
 
 	out := make([]FormatSupport, 0, len(native)+len(viaFFmpeg))
 	for _, ext := range native {

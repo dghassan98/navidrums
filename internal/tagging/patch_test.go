@@ -222,18 +222,17 @@ func TestPatchLeavesTheFileIntactOnNoChanges(t *testing.T) {
 	}
 }
 
-// TestOpusAndM4AGoThroughFFmpeg records the decision that these are retagged
-// rather than converted. Opus carries Vorbis comments natively, so converting
-// it to a "taggable" format would re-encode lossy audio into lossy audio and
-// lose real quality to solve a metadata problem. ffmpeg copies the streams
-// across untouched instead.
+// TestM4AGoesThroughFFmpeg records the decision that these are retagged rather
+// than converted: ffmpeg copies the streams across bit for bit, so nothing is
+// re-encoded. Opus is handled natively instead — see opus_test.go — because
+// ffmpeg cannot write its embedded artwork back.
 //
 // Without ffmpeg present the attempt reports that plainly rather than leaving
 // those files quietly unfixed.
-func TestOpusAndM4AGoThroughFFmpeg(t *testing.T) {
+func TestM4AGoesThroughFFmpeg(t *testing.T) {
 	dir := t.TempDir()
 
-	for _, name := range []string{"a.opus", "b.m4a"} {
+	for _, name := range []string{"b.m4a"} {
 		path := filepath.Join(dir, name)
 		if err := os.WriteFile(path, []byte("not really audio"), 0o600); err != nil {
 			t.Fatalf("seed: %v", err)

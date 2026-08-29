@@ -79,7 +79,9 @@ func ReadTags(path string) (map[string]string, error) {
 		return readFLACTags(path)
 	case ".mp3":
 		return readMP3Tags(path)
-	case ".opus", ".ogg", ".m4a", ".mp4", ".aac":
+	case ".opus", ".ogg":
+		return readOpusTagFile(path)
+	case ".m4a", ".mp4", ".aac":
 		// Reading these needs ffprobe; the applier records the previous value
 		// from the library index instead, which is where it came from.
 		return nil, fmt.Errorf("%w: %s", ErrPatchUnsupported, filepath.Ext(path))
@@ -109,11 +111,14 @@ func PatchTags(path string, changes map[string]string) error {
 		return patchFLAC(path, changes)
 	case ".mp3":
 		return patchMP3(path, changes)
-	case ".opus", ".ogg", ".m4a", ".mp4", ".aac":
-		// No pure-Go writer exists for these. ffmpeg copies the streams across
-		// bit for bit, so nothing is re-encoded and no quality is lost —
-		// converting them to a "taggable" format would degrade the audio to
-		// solve a metadata problem.
+	case ".opus", ".ogg":
+		// Handled directly rather than through ffmpeg, which cannot write an
+		// embedded picture back into Ogg and would silently discard the
+		// artwork.
+		return patchOpus(path, changes)
+	case ".m4a", ".mp4", ".aac":
+		// No pure-Go writer for these. ffmpeg copies the streams across bit for
+		// bit, so nothing is re-encoded and no quality is lost.
 		return patchViaFFmpeg(path, changes)
 	default:
 		return fmt.Errorf("%w: %s", ErrPatchUnsupported, filepath.Ext(path))
@@ -320,6 +325,44 @@ func ownershipHint(path string) string {
 
 	return fmt.Sprintf("%s, mode %04o; this process runs as %d:%d",
 		owner, mode, os.Getuid(), os.Getgid())
+}
+
+// writeFileAtomically replaces a file's contents, preferring a temporary file
+// and a rename so an interrupted write cannot damage the original.
+//
+// Creating that temporary file needs write permission on the directory, which a
+// library may withhold even where the files themselves are writable. When that
+// is refused, the content is written over the original instead, which needs
+// only the file — losing atomicity, but it is that or leave the file unfixable.
+func writeFileAtomically(path string, content []byte) error {
+	temp := path + ".navidrums.tmp"
+
+	err := os.WriteFile(temp, content, 0o644) //nolint:gosec // matches library files
+	if err == nil {
+		if renameErr := os.Rename(temp, path); renameErr != nil {
+			_ = os.Remove(temp)
+			return fmt.Errorf("could not replace the file: %w", renameErr)
+		}
+		return nil
+	}
+	_ = os.Remove(temp)
+
+	if !errors.Is(err, os.ErrPermission) {
+		return fmt.Errorf("could not write the file: %w", err)
+	}
+
+	// Without O_CREATE: this must overwrite, never create, since creating is
+	// what was just refused.
+	dst, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0) //nolint:gosec // caller supplies the library path
+	if err != nil {
+		return fmt.Errorf("cannot write this file: %w (%s)", err, ownershipHint(path))
+	}
+	defer func() { _ = dst.Close() }()
+
+	if _, err := dst.Write(content); err != nil {
+		return fmt.Errorf("could not overwrite the file: %w", err)
+	}
+	return dst.Sync()
 }
 
 // ── MP3 ──────────────────────────────────────────────────────────────────────
