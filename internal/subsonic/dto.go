@@ -40,23 +40,46 @@ type songDTO struct {
 	Duration int        `json:"duration"`
 	BitRate  int        `json:"bitRate"`
 	BitDepth int        `json:"bitDepth"`
+
+	// Navidrome sends genres as objects; older or other servers may send a
+	// bare "genre" string, so both are read and the first non-empty wins.
+	Genres      []genreDTO `json:"genres"`
+	Genre       string     `json:"genre"`
+	TrackNumber int        `json:"track"`
+	DiscNumber  int        `json:"discNumber"`
+}
+
+type genreDTO struct {
+	Name string `json:"name"`
 }
 
 func (s *songDTO) toSong() Song {
 	return Song{
-		ID:       s.ID,
-		Title:    s.Title,
-		Artist:   s.Artist,
-		Album:    s.Album,
-		ISRC:     s.ISRC.first(),
-		Suffix:   strings.ToLower(s.Suffix),
-		Path:     s.Path,
-		Year:     s.Year,
-		Duration: s.Duration,
-		BitRate:  s.BitRate,
-		BitDepth: s.BitDepth,
-		Lossless: isLossless(s.Suffix),
+		ID:          s.ID,
+		Title:       s.Title,
+		Artist:      s.Artist,
+		Album:       s.Album,
+		ISRC:        s.ISRC.first(),
+		Suffix:      strings.ToLower(s.Suffix),
+		Path:        s.Path,
+		Genre:       s.firstGenre(),
+		TrackNumber: s.TrackNumber,
+		DiscNumber:  s.DiscNumber,
+		Year:        s.Year,
+		Duration:    s.Duration,
+		BitRate:     s.BitRate,
+		BitDepth:    s.BitDepth,
+		Lossless:    isLossless(s.Suffix),
 	}
+}
+
+func (s *songDTO) firstGenre() string {
+	for _, g := range s.Genres {
+		if name := strings.TrimSpace(g.Name); name != "" {
+			return name
+		}
+	}
+	return strings.TrimSpace(s.Genre)
 }
 
 // losslessFormats are the container formats that imply no generation loss.

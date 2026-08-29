@@ -60,18 +60,23 @@ func (c *Client) Configured() bool {
 
 // Song is the subset of a Subsonic song used for library matching.
 type Song struct {
-	ID       string
-	Title    string
-	Artist   string
-	Album    string
-	ISRC     string
-	Suffix   string
-	Path     string
-	Year     int
-	Duration int
-	BitRate  int
-	BitDepth int
-	Lossless bool
+	ID     string
+	Title  string
+	Artist string
+	Album  string
+	ISRC   string
+	Suffix string
+	Path   string
+	// Genre, TrackNumber and DiscNumber exist so the cleanup can tell an
+	// absent tag from a populated one. They are not used for matching.
+	Genre       string
+	Year        int
+	Duration    int
+	BitRate     int
+	BitDepth    int
+	TrackNumber int
+	DiscNumber  int
+	Lossless    bool
 }
 
 // Ping checks the connection and credentials.

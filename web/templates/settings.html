@@ -137,6 +137,18 @@
 </div>
 
 <div class="section">
+    <h2>Library Cleanup (dry run)</h2>
+    <p class="hint">Compares your library against the Qobuz catalogue and reports what it
+        <em>would</em> change. <strong>It writes nothing.</strong> A full scan is thousands of
+        throttled lookups, so it runs in the background and takes a while.</p>
+    <div id="library-fixes" hx-get="/htmx/library-fixes" hx-trigger="load" hx-swap="innerHTML"></div>
+    <div class="toolbar-row mt-4">
+        <button class="btn btn-primary" hx-post="/htmx/library-fixes/dry-run"
+            hx-target="#library-fixes" hx-swap="innerHTML">Run dry run</button>
+    </div>
+</div>
+
+<div class="section">
     <h2>Discover Rows</h2>
     <p class="hint">Which editorial rows appear on the home page, and in what order. Drag to reorder.</p>
     <div id="discover-rows-list" class="flex flex-col gap-2 mt-2"

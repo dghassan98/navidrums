@@ -27,6 +27,7 @@ type Handler struct {
 	SettingsRepo     *store.SettingsRepo
 	DB               *store.DB
 	LibraryService   *app.LibraryService
+	LibraryFixes     *app.LibraryFixService
 	Config           *config.Config
 	Templates        *template.Template
 	Logger           *logger.Logger
@@ -35,7 +36,7 @@ type Handler struct {
 	recsMutex        sync.RWMutex
 }
 
-func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, ls *app.LibraryService, cfg *config.Config) *Handler {
+func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, ls *app.LibraryService, lf *app.LibraryFixService, cfg *config.Config) *Handler {
 	h := &Handler{
 		JobService:       js,
 		DownloadsService: ds,
@@ -43,6 +44,7 @@ func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.Provid
 		SettingsRepo:     sr,
 		DB:               db,
 		LibraryService:   ls,
+		LibraryFixes:     lf,
 		Config:           cfg,
 		Logger:           logger.Default(),
 		FormDecoder:      form.NewDecoder(),
@@ -119,6 +121,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 
 		r.Get("/htmx/library-status", h.LibraryStatusHTMX)
+		r.Get("/htmx/library-fixes", h.LibraryFixesHTMX)
+		r.Post("/htmx/library-fixes/dry-run", h.LibraryDryRunHTMX)
 		r.Post("/htmx/library-sync", h.LibrarySyncHTMX)
 
 		r.Get("/htmx/discover-rows", h.GetDiscoverRowsHTMX)

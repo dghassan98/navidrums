@@ -550,6 +550,54 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		version:     20,
+		description: "Record library tag gaps and proposed fixes",
+		up: func(tx *sqlx.Tx) error {
+			// The index needs these to tell an absent tag from a populated
+			// one. They play no part in matching. Existing rows stay blank
+			// until the next sync.
+			for _, q := range []string{
+				`ALTER TABLE library_tracks ADD COLUMN genre TEXT`,
+				`ALTER TABLE library_tracks ADD COLUMN track_number INTEGER`,
+				`ALTER TABLE library_tracks ADD COLUMN disc_number INTEGER`,
+			} {
+				if _, err := tx.Exec(q); err != nil &&
+					!strings.Contains(err.Error(), "duplicate column name") {
+					return err
+				}
+			}
+
+			// One row per proposed field change. Nothing here touches a file:
+			// this is a record of what a cleanup *would* do, reviewed before
+			// anything is applied.
+			//
+			// kind distinguishes filling an empty tag from overwriting one that
+			// disagrees; confidence distinguishes an exact ISRC match from a
+			// name match. Both drive what may be applied without review.
+			if _, err := tx.Exec(`
+				CREATE TABLE IF NOT EXISTS library_fixes (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					navidrome_id TEXT NOT NULL,
+					field TEXT NOT NULL,
+					current_value TEXT,
+					proposed_value TEXT NOT NULL,
+					kind TEXT NOT NULL,
+					confidence TEXT NOT NULL,
+					source_track_id TEXT,
+					status TEXT NOT NULL DEFAULT 'proposed',
+					created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+					UNIQUE(navidrome_id, field)
+				)`); err != nil {
+				return err
+			}
+
+			_, err := tx.Exec(
+				`CREATE INDEX IF NOT EXISTS idx_library_fixes_status
+				 ON library_fixes(status, confidence)`)
+			return err
+		},
+	},
 }
 
 type dbOps interface {

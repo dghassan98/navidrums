@@ -83,6 +83,12 @@ func main() {
 		subsonic.NewClient(cfg.NavidromeURL, cfg.NavidromeUser, cfg.NavidromePassword),
 		db, appLogger.Logger)
 
+	// Dry-run cleanup: compares the library index against the catalog and
+	// records what it would change. It writes to no files.
+	libraryFixService := app.NewLibraryFixService(
+		func() app.CatalogSearcher { return providerManager.Provider() },
+		db, appLogger.Logger)
+
 	// Initialize Router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -130,7 +136,7 @@ func main() {
 	})
 
 	// Routes
-	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, libraryService, cfg)
+	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, libraryService, libraryFixService, cfg)
 	h.RegisterRoutes(r)
 
 	// Start Server

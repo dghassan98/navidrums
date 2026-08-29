@@ -1,0 +1,58 @@
+{{define "library_fixes"}}
+{{if not .Available}}
+<p class="hint">Configure a music library first, then sync it.</p>
+{{else}}
+
+{{if .Running}}
+<div hx-get="/htmx/library-fixes" hx-trigger="every 3s" hx-swap="innerHTML" hx-target="#library-fixes">
+    <p class="text-muted">Scanning {{.Scanned}} of {{.Total}}{{if .Percent}} ({{.Percent}}%){{end}}
+        &mdash; {{.Matched}} matched so far. Nothing is being written.</p>
+</div>
+{{else}}
+
+{{if .Summary}}
+<p class="text-muted mb-4">
+    <strong>{{.Summary.Total}}</strong> proposed changes across
+    <strong>{{.Summary.FilesTouched}}</strong> files.
+    Nothing has been written &mdash; this is what a cleanup would do.
+</p>
+
+<div class="info-grid">
+    <div class="data-item">
+        <span class="data-label">Safe to apply unattended</span>
+        <span class="data-value">{{.Summary.AutoApplyOK}} &mdash; exact ISRC match, filling an empty tag</span>
+    </div>
+    <div class="data-item">
+        <span class="data-label">Needs your review</span>
+        <span class="data-value">{{.Summary.NeedsReview}} &mdash; name-matched, or overwriting a value</span>
+    </div>
+    <div class="data-item">
+        <span class="data-label">Filling empty tags</span>
+        <span class="data-value">{{.Summary.Fill}}</span>
+    </div>
+    <div class="data-item">
+        <span class="data-label">Changing existing values</span>
+        <span class="data-value">{{.Summary.Change}}</span>
+    </div>
+</div>
+
+{{if .Fields}}
+<h3 class="mt-4 mb-2">By field</h3>
+<div class="info-grid">
+    {{range .Fields}}
+    <div class="data-item">
+        <span class="data-label">{{.Label}}</span>
+        <span class="data-value">{{.Count}}</span>
+    </div>
+    {{end}}
+</div>
+{{end}}
+{{else}}
+<p class="hint">No dry run has been done yet.</p>
+{{end}}
+
+{{if .Finished}}<p class="text-sm text-muted mt-2">Last run: {{.Finished}}</p>{{end}}
+{{if .LastError}}<p class="text-danger mt-2">{{.LastError}}</p>{{end}}
+{{end}}
+{{end}}
+{{end}}
