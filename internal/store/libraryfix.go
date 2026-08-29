@@ -463,3 +463,106 @@ func (db *DB) AppendLibraryFixes(fixes []LibraryFix) error {
 	}
 	return tx.Commit()
 }
+
+// ApprovedFixFiles returns files with approved changes, ready to apply.
+func (db *DB) ApprovedFixFiles(limit int) ([]FixFile, error) {
+	var ids []string
+	if err := db.Select(&ids, `
+		SELECT DISTINCT navidrome_id FROM library_fixes
+		WHERE status = ? ORDER BY navidrome_id LIMIT ?`,
+		FixStatusApproved, limit); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := sqlx.In(`
+		SELECT f.navidrome_id, f.field, COALESCE(f.current_value,'') AS current_value,
+		       f.proposed_value, f.kind, f.confidence,
+		       COALESCE(f.source_track_id,'') AS source_track_id, f.status,
+		       COALESCE(lt.title,'') AS title, COALESCE(lt.artist,'') AS artist,
+		       COALESCE(lt.album,'') AS album, COALESCE(lt.path,'') AS path
+		FROM library_fixes f
+		LEFT JOIN library_tracks lt ON lt.navidrome_id = f.navidrome_id
+		WHERE f.status = ? AND f.navidrome_id IN (?)
+		ORDER BY f.navidrome_id, f.field`, FixStatusApproved, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.Queryx(db.Rebind(query), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	byID := map[string]*FixFile{}
+	for rows.Next() {
+		var fix LibraryFix
+		var title, artist, album, path string
+		if err := rows.Scan(&fix.NavidromeID, &fix.Field, &fix.CurrentValue,
+			&fix.ProposedValue, &fix.Kind, &fix.Confidence, &fix.SourceTrackID,
+			&fix.Status, &title, &artist, &album, &path); err != nil {
+			return nil, err
+		}
+		file, ok := byID[fix.NavidromeID]
+		if !ok {
+			file = &FixFile{NavidromeID: fix.NavidromeID,
+				Title: title, Artist: artist, Album: album, Path: path}
+			byID[fix.NavidromeID] = file
+		}
+		file.Fixes = append(file.Fixes, fix)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	out := make([]FixFile, 0, len(ids))
+	for _, id := range ids {
+		if f, ok := byID[id]; ok {
+			out = append(out, *f)
+		}
+	}
+	return out, nil
+}
+
+// RecordApplied stores what was replaced and marks the fixes done, in one
+// transaction: a backup that is not written must not leave a change recorded as
+// applied, or the undo would be incomplete.
+func (db *DB) RecordApplied(navidromeID, path string, previous, applied map[string]string) error {
+	tx, err := db.root.Beginx()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for field, value := range applied {
+		if _, err := tx.Exec(`
+			INSERT INTO library_fix_backups
+				(navidrome_id, path, field, previous_value, applied_value)
+			VALUES (?, ?, ?, ?, ?)`,
+			navidromeID, path, field, previous[field], value); err != nil {
+			return err
+		}
+
+		if _, err := tx.Exec(`
+			UPDATE library_fixes SET status = ?
+			WHERE navidrome_id = ? AND field = ? AND status = ?`,
+			FixStatusApplied, navidromeID, field, FixStatusApproved); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// CountApprovedFixes reports how much is waiting to be applied.
+func (db *DB) CountApprovedFixes() (files int, fixes int, err error) {
+	if err = db.QueryRow(
+		`SELECT COUNT(DISTINCT navidrome_id), COUNT(*) FROM library_fixes WHERE status = ?`,
+		FixStatusApproved).Scan(&files, &fixes); err != nil {
+		return 0, 0, err
+	}
+	return files, fixes, nil
+}

@@ -1,0 +1,65 @@
+{{define "library_apply"}}
+{{if not .Enabled}}
+<div class="alert alert-warning">
+    <strong>Writing to the library is off.</strong> {{.Reason}}
+</div>
+<p class="hint">
+    To enable it, mount the library into this container and set
+    <code>NAVIDRUMS_LIBRARY_WRITE=1</code>. Remove them again when the cleanup is done &mdash;
+    it is an environment variable rather than a setting precisely so it cannot be left on
+    by accident.
+</p>
+{{else}}
+<p class="text-sm text-muted">Library mounted at <code>{{.Mount}}</code>. Writing is enabled.</p>
+{{end}}
+
+{{if .ApprovedFixes}}
+<p class="text-sm text-muted mt-2">
+    {{.ApprovedFixes}} approved changes across {{.ApprovedFiles}} files are waiting.
+</p>
+{{end}}
+
+{{if .Error}}
+<div class="alert alert-error mt-2">{{.Error}}</div>
+{{end}}
+
+{{if .Report}}
+<div class="mt-4">
+    <p class="text-sm">
+        {{if .Report.DryRun}}<strong>Dry run &mdash; nothing was written.</strong>{{else}}<strong>Applied.</strong>{{end}}
+        {{.Report.Files}} files examined
+        &middot; {{.Report.Changed}} {{if .Report.DryRun}}would change{{else}}changed{{end}}
+        &middot; {{.Report.FieldsSet}} fields
+        {{if .Report.Failed}}&middot; <span class="text-danger">{{.Report.Failed}} failed</span>{{end}}
+    </p>
+
+    <table class="w-full text-sm mt-2">
+        <tbody>
+            {{range .Report.Outcomes}}
+            <tr>
+                <td style="width:34%">{{.Title}}</td>
+                <td style="width:40%" class="text-muted">{{.Path}}</td>
+                <td>
+                    {{if .Error}}<span class="text-danger">{{.Error}}</span>
+                    {{else}}{{join .Applied ", "}}{{end}}
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
+
+<div class="toolbar-row mt-4">
+    <button class="btn btn-outline" hx-post="/htmx/library-apply?limit=20&dry=1"
+        hx-target="#library-apply" hx-swap="innerHTML">Dry run (20 files)</button>
+    <button class="btn btn-primary" hx-post="/htmx/library-apply?limit=20&dry=0"
+        hx-target="#library-apply" hx-swap="innerHTML"
+        hx-confirm="Write tags to 20 files? Original values are backed up first."
+        {{if not .Enabled}}disabled{{end}}>Apply 20 files</button>
+    <button class="btn btn-primary" hx-post="/htmx/library-apply?limit=500&dry=0"
+        hx-target="#library-apply" hx-swap="innerHTML"
+        hx-confirm="Write tags to up to 500 files? Do this only after checking a small batch."
+        {{if not .Enabled}}disabled{{end}}>Apply up to 500</button>
+</div>
+{{end}}

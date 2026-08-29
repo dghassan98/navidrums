@@ -47,6 +47,9 @@ type Config struct {
 	NavidromeURL          string
 	NavidromeUser         string
 	NavidromePassword     string
+	LibraryMount          string
+	LibrarySourcePrefix   string
+	LibraryWrite          bool
 	AdminPassword         string
 	NotifyURL             string
 	AdminSessionTTL       time.Duration
@@ -89,9 +92,15 @@ func Load() *Config {
 		NavidromeURL:          getEnv("NAVIDROME_URL", ""),
 		NavidromeUser:         getEnv("NAVIDROME_USER", ""),
 		NavidromePassword:     getEnv("NAVIDROME_PASSWORD", ""),
-		AdminPassword:         getEnv("NAVIDRUMS_ADMIN_PASSWORD", ""),
-		NotifyURL:             getEnv("NOTIFY_URL", ""),
-		AdminSessionTTL:       getEnvDuration("NAVIDRUMS_ADMIN_SESSION_TTL", 30*time.Minute),
+		// Writing to the library is off unless deliberately switched on, and
+		// only through the environment: a settings toggle could be left on by
+		// accident, whereas removing this needs a restart.
+		LibraryWrite:        getEnv("NAVIDRUMS_LIBRARY_WRITE", "") == "1",
+		LibraryMount:        getEnv("LIBRARY_MOUNT", ""),
+		LibrarySourcePrefix: getEnv("LIBRARY_SOURCE_PREFIX", "/music"),
+		AdminPassword:       getEnv("NAVIDRUMS_ADMIN_PASSWORD", ""),
+		NotifyURL:           getEnv("NOTIFY_URL", ""),
+		AdminSessionTTL:     getEnvDuration("NAVIDRUMS_ADMIN_SESSION_TTL", 30*time.Minute),
 	}
 }
 

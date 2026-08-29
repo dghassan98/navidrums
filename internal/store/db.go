@@ -632,6 +632,31 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		version:     22,
+		description: "Back up tag values before the cleanup overwrites them",
+		up: func(tx *sqlx.Tx) error {
+			// Every value replaced is kept here first, read from the file
+			// rather than from the index, so a change can be undone from what
+			// was actually on disk rather than from what was believed to be.
+			if _, err := tx.Exec(`
+				CREATE TABLE IF NOT EXISTS library_fix_backups (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					navidrome_id TEXT NOT NULL,
+					path TEXT NOT NULL,
+					field TEXT NOT NULL,
+					previous_value TEXT,
+					applied_value TEXT NOT NULL,
+					applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+				)`); err != nil {
+				return err
+			}
+			_, err := tx.Exec(
+				`CREATE INDEX IF NOT EXISTS idx_fix_backups_file
+				 ON library_fix_backups(navidrome_id)`)
+			return err
+		},
+	},
 }
 
 type dbOps interface {

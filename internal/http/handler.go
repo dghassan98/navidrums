@@ -28,6 +28,7 @@ type Handler struct {
 	DB               *store.DB
 	LibraryService   *app.LibraryService
 	LibraryFixes     *app.LibraryFixService
+	LibraryApply     *app.LibraryApplyService
 	Config           *config.Config
 	Templates        *template.Template
 	Logger           *logger.Logger
@@ -36,7 +37,7 @@ type Handler struct {
 	recsMutex        sync.RWMutex
 }
 
-func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, ls *app.LibraryService, lf *app.LibraryFixService, cfg *config.Config) *Handler {
+func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, ls *app.LibraryService, lf *app.LibraryFixService, la *app.LibraryApplyService, cfg *config.Config) *Handler {
 	h := &Handler{
 		JobService:       js,
 		DownloadsService: ds,
@@ -45,6 +46,7 @@ func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.Provid
 		DB:               db,
 		LibraryService:   ls,
 		LibraryFixes:     lf,
+		LibraryApply:     la,
 		Config:           cfg,
 		Logger:           logger.Default(),
 		FormDecoder:      form.NewDecoder(),
@@ -118,8 +120,6 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/htmx/notifications", h.SetNotificationsHTMX)
 		r.Post("/htmx/notifications/test", h.TestNotificationHTMX)
 
-
-
 		r.Get("/htmx/library-status", h.LibraryStatusHTMX)
 		r.Get("/htmx/library-fixes", h.LibraryFixesHTMX)
 		r.Post("/htmx/library-fixes/dry-run", h.LibraryDryRunHTMX)
@@ -128,6 +128,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/htmx/library-review", h.LibraryReviewListHTMX)
 		r.Post("/htmx/library-review/{id}/{decision}", h.LibraryReviewDecideHTMX)
 		r.Post("/htmx/library-review-approve-safe", h.LibraryReviewApproveSafeHTMX)
+
+		r.Get("/htmx/library-apply", h.LibraryApplyStatusHTMX)
+		r.Post("/htmx/library-apply", h.LibraryApplyHTMX)
 		r.Post("/htmx/library-sync", h.LibrarySyncHTMX)
 
 		r.Get("/htmx/discover-rows", h.GetDiscoverRowsHTMX)

@@ -154,6 +154,15 @@
 </div>
 
 <div class="section">
+    <h2>Apply Library Fixes</h2>
+    <p class="hint">Writes approved changes to the files. Original values are read from the file and
+        backed up before anything is replaced, and every write is read back to confirm it took.
+        Start with a dry run, then a small batch, and check the result in your music server before
+        going further.</p>
+    <div id="library-apply" hx-get="/htmx/library-apply" hx-trigger="load" hx-swap="innerHTML"></div>
+</div>
+
+<div class="section">
     <h2>Discover Rows</h2>
     <p class="hint">Which editorial rows appear on the home page, and in what order. Drag to reorder.</p>
     <div id="discover-rows-list" class="flex flex-col gap-2 mt-2"

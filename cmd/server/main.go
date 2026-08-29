@@ -83,6 +83,11 @@ func main() {
 		subsonic.NewClient(cfg.NavidromeURL, cfg.NavidromeUser, cfg.NavidromePassword),
 		db, appLogger.Logger)
 
+	// Applies approved fixes to the files. Refuses unless deliberately
+	// enabled through the environment.
+	libraryApplyService := app.NewLibraryApplyService(
+		db, cfg.LibraryMount, cfg.LibrarySourcePrefix, cfg.LibraryWrite, appLogger.Logger)
+
 	// Dry-run cleanup: compares the library index against the catalog and
 	// records what it would change. It writes to no files.
 	libraryFixService := app.NewLibraryFixService(
@@ -136,7 +141,7 @@ func main() {
 	})
 
 	// Routes
-	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, libraryService, libraryFixService, cfg)
+	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, libraryService, libraryFixService, libraryApplyService, cfg)
 	h.RegisterRoutes(r)
 
 	// Start Server
