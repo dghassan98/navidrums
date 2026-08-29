@@ -51,6 +51,20 @@
 <p class="hint">No dry run has been done yet.</p>
 {{end}}
 
+{{if .Formats}}
+<h3 class="mt-4 mb-2">What this deployment can retag</h3>
+<div class="info-grid">
+    {{range .Formats}}
+    <div class="data-item">
+        <span class="data-label">{{.Extension}}</span>
+        <span class="data-value">
+            {{if .Available}}{{.Route}}{{else}}<span class="text-danger">unavailable &mdash; {{.Reason}}</span>{{end}}
+        </span>
+    </div>
+    {{end}}
+</div>
+{{end}}
+
 {{if .Finished}}<p class="text-sm text-muted mt-2">Last run: {{.Finished}}</p>{{end}}
 {{if .LastError}}<p class="text-danger mt-2">{{.LastError}}</p>{{end}}
 {{end}}

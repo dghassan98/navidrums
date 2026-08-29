@@ -8,6 +8,7 @@ import (
 
 	"github.com/cesargomez89/navidrums/internal/app"
 	"github.com/cesargomez89/navidrums/internal/store"
+	"github.com/cesargomez89/navidrums/internal/tagging"
 )
 
 // LibraryFixesHTMX renders the dry-run panel: progress while a scan runs, and
@@ -60,6 +61,10 @@ func (h *Handler) libraryFixView() map[string]interface{} {
 	if !p.Finished.IsZero() {
 		view["Finished"] = p.Finished.Format("2006-01-02 15:04:05")
 	}
+
+	// Reported from the running container rather than assumed: whether a file
+	// can be retagged depends on what is installed where the applier runs.
+	view["Formats"] = tagging.Capabilities()
 
 	if h.DB != nil {
 		summary, err := h.DB.SummariseLibraryFixes()
