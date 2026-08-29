@@ -1,7 +1,11 @@
 package store
 
 import (
+	"errors"
+	"strings"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // Fix kinds and confidences. These decide what may be applied without review:
@@ -172,4 +176,197 @@ func (db *DB) LibraryTracksForFix() ([]LibraryTrack, error) {
 		       COALESCE(path,'') AS path
 		FROM library_tracks ORDER BY navidrome_id`)
 	return tracks, err
+}
+
+// FixFile groups every proposed change for one file, which is how they are
+// reviewed: a file's fields are judged together, not one at a time.
+type FixFile struct {
+	NavidromeID string
+	Title       string
+	Artist      string
+	Album       string
+	Path        string
+	Fixes       []LibraryFix
+}
+
+// FixFilter narrows the review queue.
+type FixFilter struct {
+	Kind       string // "", FixKindFill, FixKindChange
+	Confidence string // "", FixConfidenceExact, FixConfidenceFuzzy
+	Field      string // "", a field name
+}
+
+func (f FixFilter) where() (string, []interface{}) {
+	clauses := []string{"f.status = ?"}
+	args := []interface{}{FixStatusProposed}
+
+	if f.Kind != "" {
+		clauses = append(clauses, "f.kind = ?")
+		args = append(args, f.Kind)
+	}
+	if f.Confidence != "" {
+		clauses = append(clauses, "f.confidence = ?")
+		args = append(args, f.Confidence)
+	}
+	if f.Field != "" {
+		clauses = append(clauses, "f.field = ?")
+		args = append(args, f.Field)
+	}
+
+	return strings.Join(clauses, " AND "), args
+}
+
+// CountFilesAwaitingReview reports how many files still have proposals.
+func (db *DB) CountFilesAwaitingReview(filter FixFilter) (int, error) {
+	where, args := filter.where()
+
+	var n int
+	err := db.QueryRow(
+		`SELECT COUNT(DISTINCT f.navidrome_id) FROM library_fixes f WHERE `+where,
+		args...).Scan(&n)
+	return n, err
+}
+
+// FilesAwaitingReview returns one page of files, each with all its proposals.
+//
+// Ordered by navidrome_id so paging is stable: ordering by anything the review
+// itself changes would make rows shuffle between pages as you work.
+func (db *DB) FilesAwaitingReview(filter FixFilter, limit, offset int) ([]FixFile, error) {
+	where, args := filter.where()
+
+	var ids []string
+	idQuery := `SELECT DISTINCT f.navidrome_id FROM library_fixes f WHERE ` + where +
+		` ORDER BY f.navidrome_id LIMIT ? OFFSET ?`
+	if err := db.Select(&ids, idQuery, append(args, limit, offset)...); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query, inArgs, err := sqlx.In(`
+		SELECT f.navidrome_id, f.field, COALESCE(f.current_value,'') AS current_value,
+		       f.proposed_value, f.kind, f.confidence,
+		       COALESCE(f.source_track_id,'') AS source_track_id, f.status,
+		       COALESCE(lt.title,'') AS title, COALESCE(lt.artist,'') AS artist,
+		       COALESCE(lt.album,'') AS album, COALESCE(lt.path,'') AS path
+		FROM library_fixes f
+		LEFT JOIN library_tracks lt ON lt.navidrome_id = f.navidrome_id
+		WHERE f.status = ? AND f.navidrome_id IN (?)
+		ORDER BY f.navidrome_id, f.field`, FixStatusProposed, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.Queryx(db.Rebind(query), inArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	byID := make(map[string]*FixFile, len(ids))
+	for rows.Next() {
+		var fix LibraryFix
+		var title, artist, album, path string
+		if err := rows.Scan(&fix.NavidromeID, &fix.Field, &fix.CurrentValue,
+			&fix.ProposedValue, &fix.Kind, &fix.Confidence,
+			&fix.SourceTrackID, &fix.Status,
+			&title, &artist, &album, &path); err != nil {
+			return nil, err
+		}
+
+		file, ok := byID[fix.NavidromeID]
+		if !ok {
+			file = &FixFile{
+				NavidromeID: fix.NavidromeID,
+				Title:       title, Artist: artist, Album: album, Path: path,
+			}
+			byID[fix.NavidromeID] = file
+		}
+		file.Fixes = append(file.Fixes, fix)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Return in the id order the page was selected in, not map order.
+	files := make([]FixFile, 0, len(ids))
+	for _, id := range ids {
+		if f, ok := byID[id]; ok {
+			files = append(files, *f)
+		}
+	}
+	return files, nil
+}
+
+// SetFixStatus marks one file's proposals. Passing fields restricts it to
+// those; empty means every proposal on the file.
+func (db *DB) SetFixStatus(navidromeID, status string, fields []string) error {
+	if len(fields) == 0 {
+		_, err := db.Exec(
+			`UPDATE library_fixes SET status = ? WHERE navidrome_id = ? AND status = ?`,
+			status, navidromeID, FixStatusProposed)
+		return err
+	}
+
+	query, args, err := sqlx.In(
+		`UPDATE library_fixes SET status = ?
+		 WHERE navidrome_id = ? AND status = ? AND field IN (?)`,
+		status, navidromeID, FixStatusProposed, fields)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(db.Rebind(query), args...)
+	return err
+}
+
+// UpdateFixValue replaces a proposed value with one entered by hand.
+//
+// An empty value is refused rather than stored: writing an empty tag is the
+// one thing the cleanup must never do.
+func (db *DB) UpdateFixValue(navidromeID, field, value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return errors.New("a proposed value cannot be empty")
+	}
+
+	_, err := db.Exec(
+		`UPDATE library_fixes SET proposed_value = ?
+		 WHERE navidrome_id = ? AND field = ? AND status = ?`,
+		value, navidromeID, field, FixStatusProposed)
+	return err
+}
+
+// ApproveSafeFixes approves every proposal eligible to apply unattended: an
+// exact ISRC match filling an empty tag. Nothing fuzzy, nothing overwriting.
+func (db *DB) ApproveSafeFixes() (int64, error) {
+	res, err := db.Exec(
+		`UPDATE library_fixes SET status = ?
+		 WHERE status = ? AND kind = ? AND confidence = ?`,
+		FixStatusApproved, FixStatusProposed, FixKindFill, FixConfidenceExact)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// FixStatusCounts reports the review queue by status.
+func (db *DB) FixStatusCounts() (map[string]int, error) {
+	counts := map[string]int{}
+
+	rows, err := db.Queryx(`SELECT status, COUNT(*) FROM library_fixes GROUP BY status`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var status string
+		var n int
+		if err := rows.Scan(&status, &n); err != nil {
+			return nil, err
+		}
+		counts[status] = n
+	}
+	return counts, rows.Err()
 }

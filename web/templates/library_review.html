@@ -1,0 +1,27 @@
+{{define "content"}}
+<div class="page-header mb-6">
+    <h1 class="m-0">Library Cleanup Review</h1>
+    <p class="text-sm text-muted mt-2">
+        Approving records your decision. <strong>Nothing is written to a file yet</strong> &mdash;
+        applying is a separate step.
+    </p>
+</div>
+
+<div class="toolbar-row mb-4">
+    <a class="btn btn-sm {{if not .Filter.Kind}}btn-primary{{else}}btn-outline{{end}}"
+        href="/library-review">All</a>
+    <a class="btn btn-sm {{if eq .Filter.Kind "fill"}}btn-primary{{else}}btn-outline{{end}}"
+        href="/library-review?kind=fill">Fills empty tags</a>
+    <a class="btn btn-sm {{if eq .Filter.Kind "change"}}btn-primary{{else}}btn-outline{{end}}"
+        href="/library-review?kind=change">Overwrites a value</a>
+    <a class="btn btn-sm {{if eq .Filter.Confidence "exact"}}btn-primary{{else}}btn-outline{{end}}"
+        href="/library-review?confidence=exact">Exact match</a>
+    <a class="btn btn-sm {{if eq .Filter.Confidence "fuzzy"}}btn-primary{{else}}btn-outline{{end}}"
+        href="/library-review?confidence=fuzzy">Name match</a>
+</div>
+
+<div id="review-list" hx-get="/htmx/library-review{{if .Filter.Kind}}?kind={{.Filter.Kind}}{{end}}"
+    hx-trigger="load" hx-swap="innerHTML">
+    <p class="text-muted">Loading&hellip;</p>
+</div>
+{{end}}

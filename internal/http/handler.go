@@ -123,6 +123,11 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/htmx/library-status", h.LibraryStatusHTMX)
 		r.Get("/htmx/library-fixes", h.LibraryFixesHTMX)
 		r.Post("/htmx/library-fixes/dry-run", h.LibraryDryRunHTMX)
+
+		r.Get("/library-review", h.LibraryReviewPage)
+		r.Get("/htmx/library-review", h.LibraryReviewListHTMX)
+		r.Post("/htmx/library-review/{id}/{decision}", h.LibraryReviewDecideHTMX)
+		r.Post("/htmx/library-review-approve-safe", h.LibraryReviewApproveSafeHTMX)
 		r.Post("/htmx/library-sync", h.LibrarySyncHTMX)
 
 		r.Get("/htmx/discover-rows", h.GetDiscoverRowsHTMX)

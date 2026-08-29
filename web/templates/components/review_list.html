@@ -1,0 +1,71 @@
+{{define "review_list"}}
+{{if .Counts}}
+<p class="text-sm text-muted mb-4">
+    {{index .Counts "proposed"}} awaiting review
+    &middot; {{index .Counts "approved"}} approved
+    &middot; {{index .Counts "rejected"}} rejected
+</p>
+{{end}}
+
+<div class="toolbar-row mb-4">
+    <button class="btn btn-sm btn-outline" hx-post="/htmx/library-review-approve-safe"
+        hx-target="#review-list" hx-swap="innerHTML"
+        title="Exact ISRC matches that only fill an empty tag">Approve all safe fills</button>
+</div>
+
+{{if not .Files}}
+<p class="text-muted">Nothing left to review here.</p>
+{{else}}
+
+{{range .Files}}
+<form class="section mb-4" hx-post="/htmx/library-review/{{.NavidromeID}}/approve"
+    hx-target="#review-list" hx-swap="innerHTML">
+    <div class="flex gap-4 items-baseline flex-wrap mb-2">
+        <strong>{{.Title}}</strong>
+        <span class="text-sm text-muted">{{.Artist}}{{if .Album}} &bull; {{.Album}}{{end}}</span>
+    </div>
+
+    <table class="w-full text-sm">
+        <tbody>
+            {{range .Fixes}}
+            <tr>
+                <td style="width:2rem">
+                    <input type="checkbox" name="field" value="{{.Field}}" checked>
+                </td>
+                <td style="width:9rem"><span class="data-label">{{.Field}}</span></td>
+                <td style="width:12rem" class="text-muted">
+                    {{if .CurrentValue}}{{.CurrentValue}}{{else}}<em>empty</em>{{end}}
+                </td>
+                <td>
+                    <input type="text" name="value_{{.Field}}" value="{{.ProposedValue}}"
+                        class="form-input" style="width:100%">
+                </td>
+                <td style="width:9rem" class="text-muted">
+                    {{.Kind}} &middot; {{.Confidence}}
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    <div class="toolbar-row mt-2">
+        <button type="submit" class="btn btn-sm btn-primary">Approve ticked</button>
+        <button type="submit" class="btn btn-sm btn-outline"
+            hx-post="/htmx/library-review/{{.NavidromeID}}/reject"
+            hx-target="#review-list" hx-swap="innerHTML"
+            title="Never propose these again">Reject &mdash; leave this file alone</button>
+    </div>
+</form>
+{{end}}
+
+<div class="toolbar-row mt-6">
+    {{if .HasPrev}}
+    <a class="btn btn-outline" href="/library-review?page={{.PrevPage}}{{.Query}}">&lsaquo; Previous</a>
+    {{end}}
+    <span class="text-sm text-muted">Page {{.Page}} of {{.TotalPages}} &middot; {{.Total}} files</span>
+    {{if .HasNext}}
+    <a class="btn btn-outline" href="/library-review?page={{.NextPage}}{{.Query}}">Next &rsaquo;</a>
+    {{end}}
+</div>
+{{end}}
+{{end}}
