@@ -1,11 +1,14 @@
 package ffmpeg
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -187,3 +190,73 @@ func ConvertToFLAC(ctx context.Context, inputPath string) (string, error) {
 
 	return outputPath, nil
 }
+
+// PatchMetadata changes only the named tags on a file, carrying every other
+// tag and the audio itself across untouched.
+//
+// This exists for the formats with no pure-Go tag writer — Opus and M4A.
+// Nothing is re-encoded: "-c copy" moves the streams across bit for bit, so an
+// Opus file is not degraded by being retagged. Converting such files to another
+// format to make them taggable would mean lossy-to-lossy re-encoding, which
+// costs real audio quality to solve a metadata problem.
+//
+// The critical difference from WriteTags is "-map_metadata 0" instead of "-1":
+// existing metadata is inherited and only the named keys are overridden,
+// rather than everything being discarded and rebuilt.
+func PatchMetadata(ctx context.Context, inputPath string, changes map[string]string) error {
+	if len(changes) == 0 {
+		return nil
+	}
+
+	ext := filepath.Ext(inputPath)
+	temp := inputPath + ".navidrums.patch" + ext
+
+	args := []string{
+		"-nostdin", "-y",
+		"-i", inputPath,
+		"-map", "0",
+		"-c", "copy",
+		"-map_metadata", "0",
+	}
+
+	// Sorted so the command is deterministic, which makes a failure
+	// reproducible from the logs.
+	keys := make([]string, 0, len(changes))
+	for k := range changes {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		args = append(args, "-metadata", fmt.Sprintf("%s=%s", k, changes[k]))
+	}
+	args = append(args, temp)
+
+	cmd := exec.CommandContext(ctx, ffmpegBin, args...) //nolint:gosec // path is configured, args are built here
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		_ = os.Remove(temp)
+		return fmt.Errorf("ffmpeg could not patch metadata: %w: %s",
+			err, lastLine(stderr.String()))
+	}
+
+	if err := os.Rename(temp, inputPath); err != nil {
+		_ = os.Remove(temp)
+		return fmt.Errorf("could not replace the patched file: %w", err)
+	}
+	return nil
+}
+
+// lastLine keeps the useful end of ffmpeg's output for an error message.
+func lastLine(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	if len(lines) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(lines[len(lines)-1])
+}
+
+// Binary reports the ffmpeg executable in use, so callers can check for it
+// before promising a file can be retagged.
+func Binary() string { return ffmpegBin }
