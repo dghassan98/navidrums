@@ -40,8 +40,9 @@
                     <input type="text" name="value_{{.Field}}" value="{{.ProposedValue}}"
                         class="form-input" style="width:100%">
                 </td>
-                <td style="width:9rem" class="text-muted">
+                <td style="width:11rem" class="text-muted">
                     {{.Kind}} &middot; {{.Confidence}}
+                    {{if eq .Field "title"}}<br><span class="text-danger">always reviewed</span>{{end}}
                 </td>
             </tr>
             {{end}}

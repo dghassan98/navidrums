@@ -18,6 +18,8 @@
         href="/library-review?confidence=exact">Exact match</a>
     <a class="btn btn-sm {{if eq .Filter.Confidence "fuzzy"}}btn-primary{{else}}btn-outline{{end}}"
         href="/library-review?confidence=fuzzy">Name match</a>
+    <a class="btn btn-sm {{if eq .Filter.Field "title"}}btn-primary{{else}}btn-outline{{end}}"
+        href="/library-review?field=title">Titles only</a>
 </div>
 
 <div id="review-list" hx-get="/htmx/library-review{{if .Filter.Kind}}?kind={{.Filter.Kind}}{{end}}"

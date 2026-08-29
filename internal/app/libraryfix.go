@@ -16,10 +16,17 @@ import (
 
 // Fields the cleanup is allowed to propose.
 //
-// Artist, album, album artist and title are deliberately absent. They are
-// populated on every track in the library, and rewriting a correct name from a
-// fuzzy match is how a cleanup damages a collection rather than improving it.
+// Artist, album and album artist are deliberately absent: they are populated on
+// every track in the library, and rewriting a correct name from a fuzzy match is
+// how a cleanup damages a collection rather than improving it.
+//
+// Title is included, but never applies unattended — see AlwaysReview. Part of
+// the library is ripped from video, carrying artefacts like "(EDIT 4K)" in the
+// title, while other titles carry the owner's own annotations such as
+// "(Instrumental)". Those are the same shape and want opposite outcomes, so no
+// rule can separate them and a person decides every one.
 const (
+	FieldTitle       = "title"
 	FieldISRC        = "isrc"
 	FieldGenre       = "genre"
 	FieldYear        = "year"
@@ -80,7 +87,10 @@ var ErrDryRunRunning = errors.New("a library dry run is already running")
 //
 // It runs in the background because a full pass is thousands of catalog
 // lookups against a throttled client — tens of minutes, far past any request.
-func (s *LibraryFixService) StartDryRun(ctx context.Context, done func()) error {
+// StartDryRun scans in the background. full re-examines the whole library;
+// otherwise only tracks never scanned before are looked at, which is what
+// makes this usable after each download rather than a 27 minute event.
+func (s *LibraryFixService) StartDryRun(ctx context.Context, full bool, done func()) error {
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
@@ -94,7 +104,7 @@ func (s *LibraryFixService) StartDryRun(ctx context.Context, done func()) error 
 		if done != nil {
 			defer done()
 		}
-		err := s.dryRun(ctx)
+		err := s.dryRun(ctx, full)
 
 		s.mu.Lock()
 		s.running = false
@@ -112,8 +122,16 @@ func (s *LibraryFixService) StartDryRun(ctx context.Context, done func()) error 
 	return nil
 }
 
-func (s *LibraryFixService) dryRun(ctx context.Context) error {
-	tracks, err := s.db.LibraryTracksForFix()
+func (s *LibraryFixService) dryRun(ctx context.Context, full bool) error {
+	if full {
+		// A full run re-examines everything, so what was scanned before no
+		// longer limits it.
+		if err := s.db.ClearScanState(); err != nil {
+			return fmt.Errorf("could not reset the scan state: %w", err)
+		}
+	}
+
+	tracks, err := s.db.UnscannedLibraryTracks()
 	if err != nil {
 		return fmt.Errorf("could not read the library index: %w", err)
 	}
@@ -123,6 +141,7 @@ func (s *LibraryFixService) dryRun(ctx context.Context) error {
 	s.mu.Unlock()
 
 	fixes := make([]store.LibraryFix, 0, len(tracks))
+	scanned := make([]string, 0, len(tracks))
 
 	for i := range tracks {
 		select {
@@ -130,6 +149,8 @@ func (s *LibraryFixService) dryRun(ctx context.Context) error {
 			return ctx.Err()
 		default:
 		}
+
+		scanned = append(scanned, tracks[i].NavidromeID)
 
 		match, confidence := s.findCatalogTrack(ctx, tracks[i])
 
@@ -152,15 +173,22 @@ func (s *LibraryFixService) dryRun(ctx context.Context) error {
 		s.mu.Unlock()
 	}
 
-	// Write once at the end: a partial proposal set reviewed as if complete
-	// would look like the library needs less work than it does.
-	if err := s.db.ReplaceLibraryFixes(fixes); err != nil {
+	// Appended rather than replacing the set: an incremental run has not
+	// looked at the rest of the library, so replacing would silently discard
+	// every proposal it did not examine.
+	if err := s.db.AppendLibraryFixes(fixes); err != nil {
 		return fmt.Errorf("could not record proposals: %w", err)
+	}
+
+	// Marked only after the proposals are safely stored, so an interrupted run
+	// re-examines those tracks next time rather than skipping them forever.
+	if err := s.db.MarkScanned(scanned); err != nil {
+		return fmt.Errorf("could not record scan progress: %w", err)
 	}
 
 	if s.logger != nil {
 		s.logger.Info("Library dry run finished",
-			"scanned", len(tracks), "proposals", len(fixes))
+			"scanned", len(tracks), "proposals", len(fixes), "full", full)
 	}
 	return nil
 }
@@ -232,6 +260,7 @@ func ProposeFixes(track store.LibraryTrack, match domain.CatalogTrack, confidenc
 		current string
 		propose string
 	}{
+		{FieldTitle, track.Title, match.Title},
 		{FieldISRC, track.ISRC, match.ISRC},
 		{FieldGenre, track.Genre, match.Genre},
 		{FieldYear, intTag(track.Year), intTag(match.Year)},
@@ -269,6 +298,12 @@ func ProposeFixes(track store.LibraryTrack, match domain.CatalogTrack, confidenc
 	}
 
 	return fixes
+}
+
+// AlwaysReview reports fields that must never be applied without a person
+// looking, whatever the match confidence.
+func AlwaysReview(field string) bool {
+	return field == FieldTitle
 }
 
 // intTag renders a numeric tag, treating zero as absent rather than as the

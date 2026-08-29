@@ -28,8 +28,10 @@ func (h *Handler) LibraryDryRunHTMX(w http.ResponseWriter, r *http.Request) {
 	// Deliberately not the request context: that is cancelled the moment this
 	// response returns, which would kill the scan immediately. The scan gets
 	// its own generous deadline instead.
+	full := r.URL.Query().Get("full") == "1"
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
-	if err := h.LibraryFixes.StartDryRun(ctx, cancel); err != nil &&
+	if err := h.LibraryFixes.StartDryRun(ctx, full, cancel); err != nil &&
 		!errors.Is(err, app.ErrDryRunRunning) {
 		cancel()
 		h.Logger.Error("Could not start the library dry run", "error", err)

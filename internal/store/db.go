@@ -598,6 +598,40 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		version:     21,
+		description: "Remember which library tracks have been scanned for fixes",
+		up: func(tx *sqlx.Tx) error {
+			// Kept out of library_tracks because that table is wiped and
+			// rebuilt on every library sync, which would lose the record of
+			// what had already been examined and force a full rescan each
+			// time. A track newly downloaded is simply one with no row here.
+			if _, err := tx.Exec(`
+				CREATE TABLE IF NOT EXISTS library_scan_state (
+					navidrome_id TEXT PRIMARY KEY,
+					scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+				)`); err != nil {
+				return err
+			}
+
+			// An install that already has proposals has already had a full
+			// scan, so mark its indexed tracks as seen. Without this the first
+			// incremental run would re-examine the whole library for nothing.
+			var proposals int
+			if err := tx.QueryRow(`SELECT COUNT(*) FROM library_fixes`).
+				Scan(&proposals); err != nil {
+				return err
+			}
+			if proposals == 0 {
+				return nil
+			}
+
+			_, err := tx.Exec(`
+				INSERT OR IGNORE INTO library_scan_state (navidrome_id)
+				SELECT navidrome_id FROM library_tracks`)
+			return err
+		},
+	},
 }
 
 type dbOps interface {

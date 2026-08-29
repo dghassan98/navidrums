@@ -337,12 +337,18 @@ func (db *DB) UpdateFixValue(navidromeID, field, value string) error {
 	return err
 }
 
+// AlwaysReviewFields never apply unattended, whatever the match confidence.
+// Title is here because a rip artefact and an owner's own annotation look
+// identical to any rule.
+var AlwaysReviewFields = []string{"title"}
+
 // ApproveSafeFixes approves every proposal eligible to apply unattended: an
-// exact ISRC match filling an empty tag. Nothing fuzzy, nothing overwriting.
+// exact ISRC match filling an empty tag. Nothing fuzzy, nothing overwriting,
+// and never a field that always needs a person.
 func (db *DB) ApproveSafeFixes() (int64, error) {
 	res, err := db.Exec(
 		`UPDATE library_fixes SET status = ?
-		 WHERE status = ? AND kind = ? AND confidence = ?`,
+		 WHERE status = ? AND kind = ? AND confidence = ? AND field NOT IN ('title')`,
 		FixStatusApproved, FixStatusProposed, FixKindFill, FixConfidenceExact)
 	if err != nil {
 		return 0, err
@@ -369,4 +375,91 @@ func (db *DB) FixStatusCounts() (map[string]int, error) {
 		counts[status] = n
 	}
 	return counts, rows.Err()
+}
+
+// UnscannedLibraryTracks returns tracks that have never been examined for
+// fixes — in practice, whatever has been downloaded since the last scan.
+func (db *DB) UnscannedLibraryTracks() ([]LibraryTrack, error) {
+	var tracks []LibraryTrack
+	err := db.Select(&tracks, `
+		SELECT lt.navidrome_id, COALESCE(lt.isrc,'') AS isrc,
+		       lt.title_key, lt.artist_key,
+		       COALESCE(lt.artist_primary_key,'') AS artist_primary_key,
+		       COALESCE(lt.album_key,'') AS album_key,
+		       COALESCE(lt.title,'') AS title, COALESCE(lt.artist,'') AS artist,
+		       COALESCE(lt.album,'') AS album, COALESCE(lt.genre,'') AS genre,
+		       COALESCE(lt.year,0) AS year, COALESCE(lt.duration,0) AS duration,
+		       COALESCE(lt.track_number,0) AS track_number,
+		       COALESCE(lt.disc_number,0) AS disc_number,
+		       COALESCE(lt.suffix,'') AS suffix, COALESCE(lt.bit_rate,0) AS bit_rate,
+		       COALESCE(lt.bit_depth,0) AS bit_depth, lt.lossless,
+		       COALESCE(lt.path,'') AS path
+		FROM library_tracks lt
+		LEFT JOIN library_scan_state s ON s.navidrome_id = lt.navidrome_id
+		WHERE s.navidrome_id IS NULL
+		ORDER BY lt.navidrome_id`)
+	return tracks, err
+}
+
+// MarkScanned records that these tracks have been examined.
+func (db *DB) MarkScanned(ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	tx, err := db.root.Beginx()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for _, id := range ids {
+		if _, err := tx.Exec(
+			`INSERT OR REPLACE INTO library_scan_state (navidrome_id, scanned_at)
+			 VALUES (?, CURRENT_TIMESTAMP)`, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// ClearScanState forgets what has been scanned, so the next run is a full one.
+func (db *DB) ClearScanState() error {
+	_, err := db.Exec(`DELETE FROM library_scan_state`)
+	return err
+}
+
+// AppendLibraryFixes adds proposals without disturbing existing ones.
+//
+// An incremental run must not touch what is already in the queue: replacing
+// the set wholesale would discard proposals for every track it did not look at.
+func (db *DB) AppendLibraryFixes(fixes []LibraryFix) error {
+	if len(fixes) == 0 {
+		return nil
+	}
+
+	tx, err := db.root.Beginx()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const insert = `
+		INSERT OR IGNORE INTO library_fixes (
+			navidrome_id, field, current_value, proposed_value,
+			kind, confidence, source_track_id, status, created_at
+		) VALUES (
+			:navidrome_id, :field, :current_value, :proposed_value,
+			:kind, :confidence, :source_track_id, :status, :created_at
+		)`
+
+	now := time.Now()
+	for i := range fixes {
+		if _, err := tx.NamedExec(insert, libraryFixRow{
+			LibraryFix: fixes[i], CreatedAt: now,
+		}); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }

@@ -62,10 +62,10 @@ func TestProposeFixesIgnoresIdenticalValues(t *testing.T) {
 	}
 }
 
-func TestProposeFixesNeverTouchesIdentityFields(t *testing.T) {
-	// Artist, album and title are populated on every track in the library.
-	// Rewriting a correct name from a match is how a cleanup does damage, so
-	// no proposal may ever name one of these fields.
+func TestProposeFixesNeverTouchesArtistOrAlbum(t *testing.T) {
+	// Artist, album and album artist are populated on every track and must
+	// never be rewritten from a match. Title is deliberately not in this set:
+	// it is proposed, but always reviewed by a person.
 	track := store.LibraryTrack{
 		NavidromeID: "n1",
 		Title:       "Wahrane Wahrane", Artist: "Khaled", Album: "Sahra",
@@ -77,7 +77,7 @@ func TestProposeFixesNeverTouchesIdentityFields(t *testing.T) {
 
 	for _, f := range ProposeFixes(track, match, store.FixConfidenceExact) {
 		switch f.Field {
-		case "title", "artist", "album", "album_artist":
+		case "artist", "album", "album_artist":
 			t.Errorf("proposed a change to identity field %q", f.Field)
 		}
 	}
@@ -138,5 +138,38 @@ func TestProposeFixesIgnoresCaseOnlyDifferences(t *testing.T) {
 
 	if fixes := ProposeFixes(track, match, store.FixConfidenceExact); len(fixes) != 0 {
 		t.Errorf("proposed %d case-only changes: %+v", len(fixes), fixes)
+	}
+}
+
+// TestTitleIsProposedButAlwaysReviewed covers the YouTube-rip case: a title
+// carrying "(EDIT 4K)" should be fixable, while an owner's own
+// "(Instrumental)" must survive. The two are indistinguishable by rule, so
+// title is proposed but never applied without a person.
+func TestTitleIsProposedButAlwaysReviewed(t *testing.T) {
+	track := store.LibraryTrack{NavidromeID: "n1", Title: "One Last Time (EDIT 4K)"}
+	match := domain.CatalogTrack{ID: "q1", Title: "One Last Time"}
+
+	fixes := ProposeFixes(track, match, store.FixConfidenceExact)
+
+	var found bool
+	for _, f := range fixes {
+		if f.Field == FieldTitle {
+			found = true
+			if f.ProposedValue != "One Last Time" {
+				t.Errorf("proposed %q", f.ProposedValue)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no title proposal; a rip artefact could never be cleaned up")
+	}
+
+	if !AlwaysReview(FieldTitle) {
+		t.Error("title must always be reviewed, never applied unattended")
+	}
+	for _, f := range []string{FieldGenre, FieldYear, FieldISRC, FieldTrackNumber, FieldDiscNumber} {
+		if AlwaysReview(f) {
+			t.Errorf("%s should not require review by field alone", f)
+		}
 	}
 }

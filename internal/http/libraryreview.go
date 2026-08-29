@@ -139,7 +139,7 @@ func readFixFilter(r *http.Request) store.FixFilter {
 		Kind:       validOneOf(r.URL.Query().Get("kind"), store.FixKindFill, store.FixKindChange),
 		Confidence: validOneOf(r.URL.Query().Get("confidence"), store.FixConfidenceExact, store.FixConfidenceFuzzy),
 		Field: validOneOf(r.URL.Query().Get("field"),
-			app.FieldISRC, app.FieldGenre, app.FieldYear,
+			app.FieldTitle, app.FieldISRC, app.FieldGenre, app.FieldYear,
 			app.FieldTrackNumber, app.FieldDiscNumber),
 	}
 }
