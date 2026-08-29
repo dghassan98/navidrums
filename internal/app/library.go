@@ -133,6 +133,15 @@ func (s *LibraryService) setErr(err error) {
 	}
 }
 
+// TriggerRescan asks the music server to re-read the library, so changes just
+// written to files become visible instead of appearing to have done nothing.
+func (s *LibraryService) TriggerRescan(ctx context.Context) error {
+	if !s.Configured() {
+		return subsonic.ErrNotConfigured
+	}
+	return s.client.StartScan(ctx)
+}
+
 func toLibraryTrack(song subsonic.Song) store.LibraryTrack {
 	return store.LibraryTrack{
 		NavidromeID:      song.ID,

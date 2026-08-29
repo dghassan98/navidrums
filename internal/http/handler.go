@@ -124,6 +124,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/htmx/library-fixes", h.LibraryFixesHTMX)
 		r.Post("/htmx/library-fixes/dry-run", h.LibraryDryRunHTMX)
 
+		r.Get("/library", h.LibraryPage)
 		r.Get("/library-review", h.LibraryReviewPage)
 		r.Get("/htmx/library-review", h.LibraryReviewListHTMX)
 		r.Post("/htmx/library-review/{id}/{decision}", h.LibraryReviewDecideHTMX)

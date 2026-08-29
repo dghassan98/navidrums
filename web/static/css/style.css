@@ -2177,3 +2177,22 @@ code {
 .item--owned .item-img {
     opacity: 0.6;
 }
+
+/* htmx request indicators. Without these rules the element htmx points at is
+   simply always visible, so a "working..." message would show permanently
+   rather than only during a request. */
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: block;
+}
+
+/* A long write is the case where feedback matters most, so the page also dims
+   while a request is in flight. */
+.htmx-request button[disabled] {
+    opacity: 0.6;
+    cursor: progress;
+}

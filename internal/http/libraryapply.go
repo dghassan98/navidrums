@@ -40,6 +40,18 @@ func (h *Handler) LibraryApplyHTMX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A rescan only matters when files actually changed, and only after a real
+	// run: without it the music server keeps serving the old tags and the work
+	// looks like it did nothing.
+	if !dryRun && report.Changed > 0 && h.LibraryService != nil {
+		if err := h.LibraryService.TriggerRescan(r.Context()); err != nil {
+			h.Logger.Error("Could not trigger a library rescan", "error", err)
+			report.RescanError = err.Error()
+		} else {
+			report.Rescanned = true
+		}
+	}
+
 	h.RenderFragment(w, "components/library_apply.html", h.applyView(report))
 }
 

@@ -2,6 +2,16 @@
 <h1>Settings</h1>
 
 <div class="section">
+    <h2>Music Library</h2>
+    <p class="hint">Indexing your library, finding metadata gaps, reviewing proposals and applying
+        them all live on their own page.</p>
+    <div class="toolbar-row mt-2">
+        <a class="btn btn-primary" href="/library">Open Music Library</a>
+        <a class="btn btn-outline" href="/library-review">Review proposals</a>
+    </div>
+</div>
+
+<div class="section">
     <h2>Settings Access</h2>
     <p class="hint" id="admin-lock-hint"></p>
     <div class="toolbar-row">
@@ -122,45 +132,8 @@
     <div id="qobuz-status" class="mt-4"></div>
 </div>
 
-<div class="section">
-    <h2>Music Library</h2>
-    <p class="hint">A <strong>read-only</strong> index of what your Navidrome library already holds, so
-        browse pages can show what is worth downloading. Navidrums only ever reads from Navidrome; it
-        never modifies the library.</p>
-    <div id="library-status" hx-get="/htmx/library-status" hx-trigger="load" hx-swap="innerHTML"></div>
-    <div class="toolbar-row mt-4">
-        <button class="btn btn-primary" hx-post="/htmx/library-sync"
-            hx-target="#library-status" hx-swap="innerHTML"
-            hx-disabled-elt="this" hx-indicator="#library-syncing">Sync now</button>
-        <span id="library-syncing" class="htmx-indicator text-muted">Syncing&hellip;</span>
-    </div>
-</div>
 
-<div class="section">
-    <h2>Library Cleanup (dry run)</h2>
-    <p class="hint">Compares your library against the Qobuz catalogue and reports what it
-        <em>would</em> change. <strong>It writes nothing.</strong> A full scan is thousands of
-        throttled lookups, so it runs in the background and takes a while.</p>
-    <div id="library-fixes" hx-get="/htmx/library-fixes" hx-trigger="load" hx-swap="innerHTML"></div>
-    <div class="toolbar-row mt-4">
-        <button class="btn btn-primary" hx-post="/htmx/library-fixes/dry-run"
-            hx-target="#library-fixes" hx-swap="innerHTML"
-            title="Only tracks never scanned before — run this after downloading">Scan new tracks</button>
-        <button class="btn btn-outline" hx-post="/htmx/library-fixes/dry-run?full=1"
-            hx-target="#library-fixes" hx-swap="innerHTML"
-            title="Re-examine the whole library — takes about half an hour">Full re-scan</button>
-        <a class="btn btn-outline" href="/library-review">Review proposals</a>
-    </div>
-</div>
 
-<div class="section">
-    <h2>Apply Library Fixes</h2>
-    <p class="hint">Writes approved changes to the files. Original values are read from the file and
-        backed up before anything is replaced, and every write is read back to confirm it took.
-        Start with a dry run, then a small batch, and check the result in your music server before
-        going further.</p>
-    <div id="library-apply" hx-get="/htmx/library-apply" hx-trigger="load" hx-swap="innerHTML"></div>
-</div>
 
 <div class="section">
     <h2>Discover Rows</h2>

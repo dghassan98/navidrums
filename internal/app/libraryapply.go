@@ -54,12 +54,14 @@ type ApplyOutcome struct {
 
 // ApplyReport summarises a run.
 type ApplyReport struct {
-	Outcomes  []ApplyOutcome
-	DryRun    bool
-	Files     int
-	Changed   int
-	Failed    int
-	FieldsSet int
+	Outcomes    []ApplyOutcome
+	RescanError string
+	Rescanned   bool
+	DryRun      bool
+	Files       int
+	Changed     int
+	Failed      int
+	FieldsSet   int
 }
 
 // ResolvePath maps a path as the music server reports it onto this container's

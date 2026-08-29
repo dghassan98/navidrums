@@ -32,6 +32,13 @@
         &middot; {{.Report.FieldsSet}} fields
         {{if .Report.Failed}}&middot; <span class="text-danger">{{.Report.Failed}} failed</span>{{end}}
     </p>
+    {{if .Report.Rescanned}}
+    <p class="text-sm text-muted">Asked your music server to rescan, so the new tags show up there.</p>
+    {{end}}
+    {{if .Report.RescanError}}
+    <p class="text-sm text-danger">Tags were written, but the rescan could not be triggered:
+        {{.Report.RescanError}}</p>
+    {{end}}
 
     <table class="w-full text-sm mt-2">
         <tbody>
@@ -50,7 +57,7 @@
 </div>
 {{end}}
 
-<div class="toolbar-row mt-4">
+<div class="toolbar-row mt-4" hx-indicator="#apply-working" hx-disabled-elt="find button">
     <button class="btn btn-outline" hx-post="/htmx/library-apply?limit=20&dry=1"
         hx-target="#library-apply" hx-swap="innerHTML">Dry run (20 files)</button>
     <button class="btn btn-primary" hx-post="/htmx/library-apply?limit=20&dry=0"
@@ -61,5 +68,10 @@
         hx-target="#library-apply" hx-swap="innerHTML"
         hx-confirm="Write tags to up to 500 files? Do this only after checking a small batch."
         {{if not .Enabled}}disabled{{end}}>Apply up to 500</button>
+</div>
+
+<div id="apply-working" class="htmx-indicator alert alert-warning mt-4">
+    <strong>Working&hellip;</strong> reading each file, writing tags and reading them back to
+    confirm. Large batches take a while &mdash; leave this page open.
 </div>
 {{end}}

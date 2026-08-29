@@ -11,6 +11,15 @@ import (
 	"github.com/cesargomez89/navidrums/internal/tagging"
 )
 
+// LibraryPage gathers everything about the music library onto one page, rather
+// than scattering it through Settings where a long-running scan and a step that
+// writes to files sit between a theme picker and a genre map.
+func (h *Handler) LibraryPage(w http.ResponseWriter, r *http.Request) {
+	h.RenderPage(w, "library.html", map[string]interface{}{
+		"ActivePage": "settings",
+	})
+}
+
 // LibraryFixesHTMX renders the dry-run panel: progress while a scan runs, and
 // a summary of what a cleanup would change once one has.
 func (h *Handler) LibraryFixesHTMX(w http.ResponseWriter, r *http.Request) {

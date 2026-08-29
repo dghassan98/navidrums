@@ -121,6 +121,18 @@ func (c *Client) Probe(ctx context.Context) (*ServerInfo, error) {
 	return info, nil
 }
 
+// StartScan asks the music server to re-read the library.
+//
+// This is the one call here that changes anything on the server, and it is a
+// deliberate exception: after tags have been written, the server still holds
+// the old values until it rescans, so leaving it out would mean the work
+// appears not to have happened. It re-reads files; it does not modify them, and
+// nothing in the music library is touched by it.
+func (c *Client) StartScan(ctx context.Context) error {
+	var resp apiEnvelope
+	return c.get(ctx, "startScan", nil, &resp)
+}
+
 // Songs streams the whole library, one page at a time. The callback runs per
 // page so the caller can write as it goes instead of holding the library in
 // memory.

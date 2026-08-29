@@ -208,8 +208,11 @@ func PatchMetadata(ctx context.Context, inputPath string, changes map[string]str
 		return nil
 	}
 
-	ext := filepath.Ext(inputPath)
-	temp := inputPath + ".navidrums.patch" + ext
+	// Keep a single, ordinary extension: the temporary name is what ffmpeg
+	// picks the output muxer from, and a doubled extension is a needless way
+	// to confuse it.
+	dir, base := filepath.Split(inputPath)
+	temp := filepath.Join(dir, ".navidrums-tmp-"+base)
 
 	args := []string{
 		"-nostdin", "-y",
@@ -238,7 +241,7 @@ func PatchMetadata(ctx context.Context, inputPath string, changes map[string]str
 	if err := cmd.Run(); err != nil {
 		_ = os.Remove(temp)
 		return fmt.Errorf("ffmpeg could not patch metadata: %w: %s",
-			err, lastLine(stderr.String()))
+			err, tailLines(stderr.String(), 6))
 	}
 
 	if err := os.Rename(temp, inputPath); err != nil {
@@ -248,13 +251,17 @@ func PatchMetadata(ctx context.Context, inputPath string, changes map[string]str
 	return nil
 }
 
-// lastLine keeps the useful end of ffmpeg's output for an error message.
-func lastLine(s string) string {
+// tailLines keeps the useful end of ffmpeg's output. One line is rarely enough
+// to tell why it refused; the real reason is usually a line or two above.
+func tailLines(s string, n int) string {
 	lines := strings.Split(strings.TrimSpace(s), "\n")
-	if len(lines) == 0 {
-		return ""
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
 	}
-	return strings.TrimSpace(lines[len(lines)-1])
+	for i := range lines {
+		lines[i] = strings.TrimSpace(lines[i])
+	}
+	return strings.Join(lines, " | ")
 }
 
 // Binary reports the ffmpeg executable in use, so callers can check for it

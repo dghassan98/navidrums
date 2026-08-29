@@ -18,8 +18,13 @@ var writeEndpoints = []string{
 	"createPodcastChannel", "deletePodcastChannel", "deletePodcastEpisode",
 	"setRating", "star", "unstar", "scrobble",
 	"createInternetRadioStation", "updateInternetRadioStation", "deleteInternetRadioStation",
-	"startScan", "savePlayQueue", "saveQueue",
+	"savePlayQueue", "saveQueue",
 }
+
+// startScan is deliberately absent from that list. It is the one call that
+// changes server state, and only by asking it to re-read the library — it does
+// not modify a single file. Without it, tags written by the cleanup would stay
+// invisible until the server happened to rescan on its own.
 
 // TestClientOnlyIssuesReadOnlyRequests is the guarantee the whole feature
 // rests on: the music library is never modified by Navidrums. It is enforced
