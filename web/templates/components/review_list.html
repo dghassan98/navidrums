@@ -1,8 +1,15 @@
 {{define "review_list"}}
 {{if .Counts}}
+{{if index .Counts "approved"}}
+<div class="alert alert-warning mb-4">
+    <strong>{{index .Counts "approved"}} approved changes are queued but not yet written.</strong>
+    Approving records your decision only. Nothing has been changed on disk &mdash; applying is a
+    separate step that still has to be built, and has to run on the machine holding the music files.
+</div>
+{{end}}
 <p class="text-sm text-muted mb-4">
     {{index .Counts "proposed"}} awaiting review
-    &middot; {{index .Counts "approved"}} approved
+    &middot; {{index .Counts "approved"}} approved, not yet applied
     &middot; {{index .Counts "rejected"}} rejected
 </p>
 {{end}}
