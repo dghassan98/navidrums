@@ -49,7 +49,8 @@ const cacheKeyPrefix = "qobuz-direct:"
 //
 //	v1 - initial
 //	v2 - album tracks inherit album id, name, artist and cover art
-const cacheSchemaVersion = "v2"
+//	v3 - tracks carry the genre from their album
+const cacheSchemaVersion = "v3"
 
 // Browse responses age very differently from catalog lookups, so they carry
 // their own TTLs rather than the configured default.

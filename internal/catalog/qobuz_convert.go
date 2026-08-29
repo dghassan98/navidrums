@@ -166,11 +166,16 @@ func (item *QobuzTrackItem) ToDomain() domain.CatalogTrack {
 	albumTitle := ""
 	albumArtist := ""
 	albumArtURL := ""
+	// Qobuz carries genre on the album, never on the track. Without this a
+	// track has no genre at all, which silently made the library cleanup
+	// unable to propose the single most common missing tag.
+	genre := ""
 	if item.Album != nil {
 		albumID = item.Album.ID
 		albumTitle = item.Album.Title
 		albumArtist = item.Album.Artist.Name
 		albumArtURL = item.Album.Image.Large
+		genre = item.Album.Genre.Name
 	}
 
 	artists := []string{item.Performer.Name}
@@ -190,7 +195,7 @@ func (item *QobuzTrackItem) ToDomain() domain.CatalogTrack {
 		Year:           parseYear(item.ReleaseDateOriginal),
 		Duration:       item.Duration,
 		ISRC:           item.ISRC,
-		Genre:          "",
+		Genre:          genre,
 		Copyright:      item.Copyright,
 		ReplayGain:     replayGain,
 		Peak:           peak,
@@ -215,11 +220,14 @@ func (item *QobuzTrackResponse) ToDomain() domain.CatalogTrack {
 	albumTitle := ""
 	albumArtist := ""
 	albumArtURL := ""
+	// Genre lives on the album, never on the track.
+	genre := ""
 	if item.Album != nil {
 		albumID = item.Album.ID
 		albumTitle = item.Album.Title
 		albumArtist = item.Album.Artist.Name
 		albumArtURL = item.Album.Image.Large
+		genre = item.Album.Genre.Name
 	}
 
 	artists := []string{item.Performer.Name}
@@ -239,7 +247,7 @@ func (item *QobuzTrackResponse) ToDomain() domain.CatalogTrack {
 		Year:           parseYear(item.ReleaseDateOriginal),
 		Duration:       item.Duration,
 		ISRC:           item.ISRC,
-		Genre:          "",
+		Genre:          genre,
 		Copyright:      item.Copyright,
 		ReplayGain:     replayGain,
 		Peak:           peak,

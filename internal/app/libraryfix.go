@@ -244,7 +244,10 @@ func ProposeFixes(track store.LibraryTrack, match domain.CatalogTrack, confidenc
 		propose := strings.TrimSpace(c.propose)
 		current := strings.TrimSpace(c.current)
 
-		if propose == "" || propose == current {
+		// A value differing only in case is not worth rewriting a file for.
+		// The dry run found an ISRC proposed purely to change "Ussm11905848"
+		// into "USSM11905848".
+		if propose == "" || strings.EqualFold(propose, current) {
 			continue
 		}
 

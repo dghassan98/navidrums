@@ -129,3 +129,14 @@ func TestIntTagTreatsZeroAsAbsent(t *testing.T) {
 		t.Errorf("intTag(7) = %q", got)
 	}
 }
+
+func TestProposeFixesIgnoresCaseOnlyDifferences(t *testing.T) {
+	// The dry run proposed rewriting "Ussm11905848" as "USSM11905848" — a file
+	// write that changes nothing but the casing of an identifier.
+	track := store.LibraryTrack{NavidromeID: "n1", ISRC: "Ussm11905848", Genre: "raï"}
+	match := domain.CatalogTrack{ID: "q1", ISRC: "USSM11905848", Genre: "Raï"}
+
+	if fixes := ProposeFixes(track, match, store.FixConfidenceExact); len(fixes) != 0 {
+		t.Errorf("proposed %d case-only changes: %+v", len(fixes), fixes)
+	}
+}

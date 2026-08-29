@@ -323,3 +323,29 @@ func TestAlbumTracksInheritAlbumFields(t *testing.T) {
 		}
 	}
 }
+
+// TestSearchedTracksCarryAGenre covers a silent gap the library cleanup
+// exposed: Qobuz puts genre on the album, never on the track, and the track
+// converters hardcoded an empty genre. The dry run therefore proposed zero
+// genre fixes even though genre was the most common missing tag in the
+// library.
+func TestSearchedTracksCarryAGenre(t *testing.T) {
+	srv, _ := browseServer(t, map[string]string{
+		"track/search": fixture(t, "track-search.json"),
+	})
+
+	p := NewQobuzDirectProvider(srv.URL, testQobuzCredentials())
+	result, err := p.Search(context.Background(), "anything", "track")
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+	if len(result.Tracks) == 0 {
+		t.Fatal("no tracks parsed from the fixture")
+	}
+
+	for i, track := range result.Tracks {
+		if track.Genre == "" {
+			t.Errorf("track %d (%s) has no genre; it should come from its album", i, track.Title)
+		}
+	}
+}
