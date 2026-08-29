@@ -292,8 +292,9 @@ func saveFLACInPlace(f *flac.File, path string) error {
 	// create a new one, since creating is exactly what was refused.
 	dst, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0) //nolint:gosec // caller supplies the library path
 	if err != nil {
-		return fmt.Errorf("could not open the FLAC for writing "+
-			"(its directory is not writable either): %w", err)
+		// Say who owns it and who we are. Otherwise diagnosing this means
+		// running stat by hand inside the container for every failure.
+		return fmt.Errorf("cannot write this file: %w (%s)", err, ownershipHint(path))
 	}
 	defer func() { _ = dst.Close() }()
 
@@ -301,6 +302,24 @@ func saveFLACInPlace(f *flac.File, path string) error {
 		return fmt.Errorf("could not overwrite the FLAC: %w", err)
 	}
 	return dst.Sync()
+}
+
+// ownershipHint describes who owns a file and who is trying to write it, so a
+// permission failure carries its own diagnosis.
+func ownershipHint(path string) string {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "could not stat it either"
+	}
+
+	mode := info.Mode().Perm()
+	owner := "unknown"
+	if uid, gid, ok := fileOwner(info); ok {
+		owner = fmt.Sprintf("owned by %d:%d", uid, gid)
+	}
+
+	return fmt.Sprintf("%s, mode %04o; this process runs as %d:%d",
+		owner, mode, os.Getuid(), os.Getgid())
 }
 
 // ── MP3 ──────────────────────────────────────────────────────────────────────
