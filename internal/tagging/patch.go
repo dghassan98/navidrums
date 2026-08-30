@@ -125,6 +125,10 @@ func PatchTags(path string, changes map[string]string) error {
 	}
 }
 
+// patchViaFFmpeg handles M4A, MP4 and AAC. Unlike Ogg/Opus, MP4's muxer can
+// carry an embedded cover straight through as an attached-picture video
+// stream — WriteTags already relies on that when embedding art into a freshly
+// downloaded file — so there is no artwork guard to apply here.
 func patchViaFFmpeg(path string, changes map[string]string) error {
 	if _, err := exec.LookPath(ffmpeg.Binary()); err != nil {
 		return fmt.Errorf("%w (%s)", ErrFFmpegMissing, filepath.Ext(path))
@@ -140,14 +144,6 @@ func patchViaFFmpeg(path string, changes map[string]string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
-
-	// Refuse rather than quietly discard artwork. ffmpeg cannot write an
-	// embedded picture back into an Ogg or Opus file, so retagging one would
-	// return a valid file that has silently lost its cover.
-	hasPicture, probeErr := ffmpeg.HasNonAudioStream(ctx, path)
-	if probeErr == nil && hasPicture {
-		return fmt.Errorf("%w: %s", ffmpeg.ErrAttachedPicture, filepath.Base(path))
-	}
 
 	return ffmpeg.PatchMetadata(ctx, path, mapped)
 }

@@ -3,7 +3,6 @@ package ffmpeg
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -218,10 +217,13 @@ func PatchMetadata(ctx context.Context, inputPath string, changes map[string]str
 	args := []string{
 		"-nostdin", "-y",
 		"-i", inputPath,
-		// Only the audio: an embedded picture appears as a video stream that
-		// the Ogg muxer cannot write. The caller checks for one first, so
-		// reaching here means there is nothing else to carry.
-		"-map", "0:a",
+		// Every stream, not just audio: MP4/M4A's muxer already carries an
+		// embedded cover as an attached-picture video stream — WriteTags above
+		// embeds one the same way when a file is first downloaded — so there is
+		// no reason to drop it here. That restriction is specific to Ogg, whose
+		// muxer cannot remux a picture stream; Opus and Ogg are handled by
+		// patchOpus instead of reaching this function at all.
+		"-map", "0",
 		"-c", "copy",
 		"-map_metadata", "0",
 	}
@@ -271,43 +273,3 @@ func tailLines(s string, n int) string {
 // Binary reports the ffmpeg executable in use, so callers can check for it
 // before promising a file can be retagged.
 func Binary() string { return ffmpegBin }
-
-// ErrAttachedPicture reports a file whose cover art ffmpeg cannot carry across.
-var ErrAttachedPicture = errors.New("this file has embedded cover art that retagging would discard")
-
-// ffprobeBin is derived from the configured ffmpeg path so a custom install is
-// honoured for both.
-func ffprobeBin() string {
-	if ffmpegBin == "ffmpeg" {
-		return "ffprobe"
-	}
-	dir, file := filepath.Split(ffmpegBin)
-	return filepath.Join(dir, strings.Replace(file, "ffmpeg", "ffprobe", 1))
-}
-
-// HasNonAudioStream reports whether a file carries anything besides audio —
-// in practice, an embedded cover.
-//
-// It matters because ffmpeg surfaces an embedded picture as a video stream, and
-// the Ogg/Opus muxer cannot write one back. Copying only the audio would
-// succeed and quietly lose the artwork, so this is checked before writing
-// rather than discovered afterwards.
-func HasNonAudioStream(ctx context.Context, path string) (bool, error) {
-	cmd := exec.CommandContext(ctx, ffprobeBin(), //nolint:gosec // path is configured
-		"-v", "error",
-		"-show_entries", "stream=codec_type",
-		"-of", "csv=p=0",
-		path)
-
-	out, err := cmd.Output()
-	if err != nil {
-		return false, fmt.Errorf("ffprobe could not inspect the file: %w", err)
-	}
-
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		if kind := strings.TrimSpace(line); kind != "" && kind != "audio" {
-			return true, nil
-		}
-	}
-	return false, nil
-}
