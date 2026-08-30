@@ -255,12 +255,34 @@ func (h *Handler) PlaylistPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DownloadHTMX(w http.ResponseWriter, r *http.Request) {
 	jobType := chi.URLParam(r, "type")
 	id := chi.URLParam(r, "id")
+	force := r.URL.Query().Get("force") == "1"
 
-	// Refuse a single track that is already in the library, unless the caller
-	// deliberately overrides. Re-downloading what you already have is the exact
-	// thing the library index exists to prevent, and silently queueing it makes
-	// the ownership marks pointless.
-	if domain.JobType(jobType) == domain.JobTypeTrack && r.URL.Query().Get("force") != "1" {
+	// An album is queued track by track so the ones already in the library can
+	// be left out. Downloading the whole thing regardless is what produced
+	// duplicates, and it is the download button people reach for first.
+	if domain.JobType(jobType) == domain.JobTypeAlbum {
+		queued, skipped, err := h.enqueueAlbumTracks(r, id, force)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		switch {
+		case queued == 0 && skipped > 0:
+			writeAlert(w, "alert-success",
+				fmt.Sprintf("Nothing to do — all %d tracks are already in your library.", skipped))
+		case skipped > 0:
+			writeAlert(w, "alert-success",
+				fmt.Sprintf("Queued %d track(s); skipped %d already in your library.", queued, skipped))
+		default:
+			writeAlert(w, "alert-success", fmt.Sprintf("Queued %d track(s).", queued))
+		}
+		return
+	}
+
+	// A single track the library already holds is refused rather than filtered:
+	// there is nothing left to queue, so saying so is the only useful answer.
+	if domain.JobType(jobType) == domain.JobTypeTrack && !force {
 		if held, why := h.trackAlreadyHeld(r, id); held {
 			w.WriteHeader(http.StatusConflict)
 			writeAlert(w, "alert-warning", why)
@@ -268,14 +290,12 @@ func (h *Handler) DownloadHTMX(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_, err := h.JobService.EnqueueJob(id, domain.JobType(jobType))
-	if err != nil {
+	if _, err := h.JobService.EnqueueJob(id, domain.JobType(jobType)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Return updated queue or confirmation
-	_, _ = w.Write([]byte("<div class='alert alert-success'>Download started!</div>"))
+	writeAlert(w, "alert-success", "Download started!")
 }
 
 func (h *Handler) SettingsPage(w http.ResponseWriter, r *http.Request) {

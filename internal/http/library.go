@@ -153,6 +153,48 @@ func writeAlert(w http.ResponseWriter, class, message string) {
 	_, _ = fmt.Fprintf(w, "<div class='alert %s'>%s</div>", class, html.EscapeString(message))
 }
 
+// enqueueAlbumTracks queues an album, skipping whatever the library already
+// holds.
+//
+// Queueing the whole album re-fetches tracks that are already there, which on a
+// library of cherry-picked singles is how duplicates get made. Skipping them is
+// the useful default; forceAll exists for deliberately re-downloading, say to
+// replace lossy copies.
+func (h *Handler) enqueueAlbumTracks(r *http.Request, albumID string, forceAll bool) (queued, skipped int, err error) {
+	album, err := h.ProviderManager.Provider().GetAlbum(r.Context(), albumID)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(album.Tracks) == 0 {
+		return 0, 0, fmt.Errorf("this album has no tracks to download")
+	}
+
+	index := h.libraryIndex()
+	if index != nil && !forceAll {
+		if _, ownErr := index.OwnershipFor(album.Tracks); ownErr != nil {
+			// A failed lookup must not silently turn this into a full
+			// re-download; fall back to queueing everything and say nothing
+			// was skipped.
+			h.Logger.Error("Ownership lookup failed", "album", albumID, "error", ownErr)
+		}
+	}
+
+	for i := range album.Tracks {
+		if !forceAll && album.Tracks[i].Owned {
+			skipped++
+			continue
+		}
+		if _, jobErr := h.JobService.EnqueueJob(album.Tracks[i].ID, domain.JobTypeTrack); jobErr != nil {
+			h.Logger.Error("Could not queue a track",
+				"album", albumID, "track", album.Tracks[i].ID, "error", jobErr)
+			continue
+		}
+		queued++
+	}
+
+	return queued, skipped, nil
+}
+
 // trackAlreadyHeld reports whether the library already holds this track, and
 // why, phrased for the person about to download it.
 //

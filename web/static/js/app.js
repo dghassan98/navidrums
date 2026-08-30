@@ -20,16 +20,19 @@ function queueDownload(e, type, id, btn, force) {
     method: 'POST',
     headers: { 'HX-Request': 'true' }
   }).then(response => {
-    // 409 means the library already holds this track. Say so and let the
-    // download happen anyway if that is really what was wanted, rather than
-    // silently re-downloading or silently refusing.
+    // 409 means the library already holds some or all of this. Say so and let
+    // the download happen anyway if that is really what was wanted, rather
+    // than silently re-downloading and creating duplicates.
     if (response.status === 409) {
       return response.text().then(body => {
         const message = body.replace(/<[^>]*>/g, '').trim();
         resetDownloadButton(btn);
+        const prompt = type === 'album'
+          ? 'Download the whole album anyway, duplicating what you already have?'
+          : 'Download it again anyway?';
         if (window.confirm(`${message}
 
-Download it again anyway?`)) {
+${prompt}`)) {
           queueDownload(e, type, id, btn, true);
         }
       });
