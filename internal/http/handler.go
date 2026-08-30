@@ -29,6 +29,7 @@ type Handler struct {
 	LibraryService   *app.LibraryService
 	LibraryFixes     *app.LibraryFixService
 	LibraryApply     *app.LibraryApplyService
+	Duplicates       *app.DuplicateService
 	Config           *config.Config
 	Templates        *template.Template
 	Logger           *logger.Logger
@@ -37,7 +38,7 @@ type Handler struct {
 	recsMutex        sync.RWMutex
 }
 
-func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, ls *app.LibraryService, lf *app.LibraryFixService, la *app.LibraryApplyService, cfg *config.Config) *Handler {
+func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.ProviderManager, sr *store.SettingsRepo, db *store.DB, ls *app.LibraryService, lf *app.LibraryFixService, la *app.LibraryApplyService, dup *app.DuplicateService, cfg *config.Config) *Handler {
 	h := &Handler{
 		JobService:       js,
 		DownloadsService: ds,
@@ -47,6 +48,7 @@ func NewHandler(js *app.JobService, ds *app.DownloadsService, pm *catalog.Provid
 		LibraryService:   ls,
 		LibraryFixes:     lf,
 		LibraryApply:     la,
+		Duplicates:       dup,
 		Config:           cfg,
 		Logger:           logger.Default(),
 		FormDecoder:      form.NewDecoder(),
@@ -125,6 +127,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/htmx/library-fixes/dry-run", h.LibraryDryRunHTMX)
 
 		r.Get("/library", h.LibraryPage)
+		r.Get("/library-duplicates", h.DuplicatesPage)
+		r.Get("/htmx/duplicates", h.DuplicatesListHTMX)
+		r.Post("/htmx/duplicates/{id}/delete", h.DuplicateDeleteHTMX)
 		r.Get("/library-review", h.LibraryReviewPage)
 		r.Get("/htmx/library-review", h.LibraryReviewListHTMX)
 		r.Post("/htmx/library-review/{id}/{decision}", h.LibraryReviewDecideHTMX)

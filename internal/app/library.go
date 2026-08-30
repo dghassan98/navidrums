@@ -118,11 +118,42 @@ func (s *LibraryService) Sync(ctx context.Context) error {
 	s.lastRows = len(tracks)
 	s.mu.Unlock()
 
+	// Playlist membership is fetched alongside the tracks because it is what
+	// makes a deletion decision safe: removing a file a playlist points at
+	// breaks the playlist, and nothing about the file itself says so.
+	if err := s.syncPlaylists(ctx); err != nil {
+		s.setErr(fmt.Errorf("library synced, but playlists did not: %w", err))
+	}
+
 	if s.logger != nil {
 		s.logger.Info("Library index synced",
 			"tracks", len(tracks), "took", time.Since(started).Round(time.Millisecond))
 	}
 	return nil
+}
+
+func (s *LibraryService) syncPlaylists(ctx context.Context) error {
+	playlists, err := s.client.Playlists(ctx)
+	if err != nil {
+		return err
+	}
+
+	entries := make([]store.PlaylistEntry, 0, 1024)
+	for _, playlist := range playlists {
+		for _, songID := range playlist.SongIDs {
+			entries = append(entries, store.PlaylistEntry{
+				NavidromeID:  songID,
+				PlaylistID:   playlist.ID,
+				PlaylistName: playlist.Name,
+			})
+		}
+	}
+
+	if s.logger != nil {
+		s.logger.Info("Playlist membership synced",
+			"playlists", len(playlists), "entries", len(entries))
+	}
+	return s.db.ReplacePlaylistMembership(entries)
 }
 
 func (s *LibraryService) setErr(err error) {
@@ -163,6 +194,9 @@ func toLibraryTrack(song subsonic.Song) store.LibraryTrack {
 		Artist:           song.Artist,
 		Album:            song.Album,
 		Genre:            song.Genre,
+		StrictKey:        StrictMatchKey(song.Title),
+		AddedAt:          song.Created,
+		Size:             song.Size,
 		Year:             song.Year,
 		TrackNumber:      song.TrackNumber,
 		DiscNumber:       song.DiscNumber,

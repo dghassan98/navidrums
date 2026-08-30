@@ -173,3 +173,48 @@ func isGenericArtist(key string) bool {
 	}
 	return false
 }
+
+// StrictMatchKey identifies a specific recording, where NormalizeMatchKey
+// identifies a song.
+//
+// The difference decides whether deleting a file is safe. NormalizeMatchKey
+// strips "(Instrumental)", "(Live at Dublin)", "(Remastered)" and the like so a
+// library track can be matched against a catalogue release. Using that to find
+// duplicates groups three genuinely different recordings of Holiday together,
+// and the danger is not a wrong tag but a deleted file.
+//
+// So this keeps every qualifier and only removes punctuation, case and accents.
+func StrictMatchKey(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+
+	var b strings.Builder
+	b.Grow(len(s))
+	lastWasSpace := true
+	for _, r := range s {
+		switch {
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			b.WriteRune(foldRune(r))
+			lastWasSpace = false
+		case isApostrophe(r):
+			// Apostrophes vanish rather than splitting a word, so "Don't" and
+			// "Dont" agree the way two taggers would write the same title.
+		default:
+			// Brackets, dashes and the rest become separators, which is what
+			// keeps "breathin (sad version)" distinct from "breathin".
+			if !lastWasSpace {
+				b.WriteByte(' ')
+				lastWasSpace = true
+			}
+		}
+	}
+
+	return strings.TrimSpace(b.String())
+}
+
+// isApostrophe reports the several characters taggers use for one.
+//
+// Written as code points because the literals are otherwise a thicket of
+// escaping: U+0027 apostrophe, U+2019 right single quote, U+0060 backtick.
+func isApostrophe(r rune) bool {
+	return r == 0x0027 || r == 0x2019 || r == 0x0060
+}

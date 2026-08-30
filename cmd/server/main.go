@@ -88,6 +88,8 @@ func main() {
 	libraryApplyService := app.NewLibraryApplyService(
 		db, cfg.LibraryMount, cfg.LibrarySourcePrefix, cfg.LibraryWrite, appLogger.Logger)
 
+	duplicateService := app.NewDuplicateService(db, libraryApplyService, appLogger.Logger)
+
 	// Dry-run cleanup: compares the library index against the catalog and
 	// records what it would change. It writes to no files.
 	libraryFixService := app.NewLibraryFixService(
@@ -141,7 +143,7 @@ func main() {
 	})
 
 	// Routes
-	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, libraryService, libraryFixService, libraryApplyService, cfg)
+	h := httpapp.NewHandler(jobService, downloadsService, providerManager, settingsRepo, db, libraryService, libraryFixService, libraryApplyService, duplicateService, cfg)
 	h.RegisterRoutes(r)
 
 	// Start Server

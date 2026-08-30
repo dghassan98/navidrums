@@ -21,6 +21,8 @@ type LibraryTrack struct {
 	Artist           string `db:"artist"`
 	Album            string `db:"album"`
 	Genre            string `db:"genre"`
+	StrictKey        string `db:"strict_key"`
+	AddedAt          string `db:"added_at"`
 	Suffix           string `db:"suffix"`
 	Path             string `db:"path"`
 	Year             int    `db:"year"`
@@ -29,6 +31,7 @@ type LibraryTrack struct {
 	BitDepth         int    `db:"bit_depth"`
 	TrackNumber      int    `db:"track_number"`
 	DiscNumber       int    `db:"disc_number"`
+	Size             int64  `db:"size"`
 	Lossless         bool   `db:"lossless"`
 }
 
@@ -53,10 +56,12 @@ func (db *DB) ReplaceLibraryTracks(tracks []LibraryTrack) error {
 		INSERT OR REPLACE INTO library_tracks (
 			navidrome_id, isrc, title_key, artist_key, artist_primary_key, album_key,
 			title, artist, album, year, duration, genre, track_number, disc_number,
+			strict_key, added_at, size,
 			suffix, bit_rate, bit_depth, lossless, path, synced_at
 		) VALUES (
 			:navidrome_id, :isrc, :title_key, :artist_key, :artist_primary_key, :album_key,
 			:title, :artist, :album, :year, :duration, :genre, :track_number, :disc_number,
+			:strict_key, :added_at, :size,
 			:suffix, :bit_rate, :bit_depth, :lossless, :path, :synced_at
 		)`
 

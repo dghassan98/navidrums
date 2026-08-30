@@ -70,13 +70,55 @@ type Song struct {
 	// Genre, TrackNumber and DiscNumber exist so the cleanup can tell an
 	// absent tag from a populated one. They are not used for matching.
 	Genre       string
+	Created     string
 	Year        int
+	Size        int64
 	Duration    int
 	BitRate     int
 	BitDepth    int
 	TrackNumber int
 	DiscNumber  int
 	Lossless    bool
+}
+
+// Playlist is one playlist and its track ids.
+type Playlist struct {
+	ID      string
+	Name    string
+	SongIDs []string
+}
+
+// Playlists returns every playlist with the tracks it contains.
+//
+// Membership matters before deleting anything: removing a file that a playlist
+// points at silently breaks the playlist, and that is not visible from the file
+// itself.
+func (c *Client) Playlists(ctx context.Context) ([]Playlist, error) {
+	var list apiEnvelope
+	if err := c.get(ctx, "getPlaylists", nil, &list); err != nil {
+		return nil, err
+	}
+
+	out := make([]Playlist, 0, len(list.Response.Playlists.Playlist))
+	for _, p := range list.Response.Playlists.Playlist {
+		params := url.Values{}
+		params.Set("id", p.ID)
+
+		var detail apiEnvelope
+		if err := c.get(ctx, "getPlaylist", params, &detail); err != nil {
+			// One unreadable playlist should not lose the rest: a partial
+			// picture still prevents most mistaken deletions.
+			continue
+		}
+
+		entry := Playlist{ID: p.ID, Name: p.Name}
+		for _, song := range detail.Response.Playlist.Entry {
+			entry.SongIDs = append(entry.SongIDs, song.ID)
+		}
+		out = append(out, entry)
+	}
+
+	return out, nil
 }
 
 // Ping checks the connection and credentials.

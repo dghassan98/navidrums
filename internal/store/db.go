@@ -657,6 +657,47 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		version:     23,
+		description: "Track file size, date added, strict key and playlist membership",
+		up: func(tx *sqlx.Tx) error {
+			// Everything needed to judge which copy of a duplicate to keep.
+			// strict_key groups recordings without collapsing "(Instrumental)"
+			// or "(Live)" into the original, which the catalogue key does.
+			for _, q := range []string{
+				`ALTER TABLE library_tracks ADD COLUMN size INTEGER`,
+				`ALTER TABLE library_tracks ADD COLUMN added_at TEXT`,
+				`ALTER TABLE library_tracks ADD COLUMN strict_key TEXT`,
+			} {
+				if _, err := tx.Exec(q); err != nil &&
+					!strings.Contains(err.Error(), "duplicate column name") {
+					return err
+				}
+			}
+
+			// Deleting a file a playlist points at breaks the playlist
+			// silently, and nothing about the file says it is referenced.
+			if _, err := tx.Exec(`
+				CREATE TABLE IF NOT EXISTS library_playlist_tracks (
+					navidrome_id TEXT NOT NULL,
+					playlist_id TEXT NOT NULL,
+					playlist_name TEXT NOT NULL,
+					PRIMARY KEY (navidrome_id, playlist_id)
+				)`); err != nil {
+				return err
+			}
+
+			for _, q := range []string{
+				`CREATE INDEX IF NOT EXISTS idx_library_strict ON library_tracks(strict_key, artist_key)`,
+				`CREATE INDEX IF NOT EXISTS idx_playlist_tracks_song ON library_playlist_tracks(navidrome_id)`,
+			} {
+				if _, err := tx.Exec(q); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	},
 }
 
 type dbOps interface {

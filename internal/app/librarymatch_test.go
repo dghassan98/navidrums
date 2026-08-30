@@ -137,3 +137,51 @@ func TestCollaborationCreditsMatchBothWays(t *testing.T) {
 		t.Error("titles did not normalise to the same key")
 	}
 }
+
+// TestStrictMatchKeySeparatesVersions is the guarantee behind safe deletion.
+// The catalogue matcher deliberately collapses these together; grouping
+// duplicates that way would offer three different recordings as copies of one
+// another, and the mistake would cost a file rather than a tag.
+func TestStrictMatchKeySeparatesVersions(t *testing.T) {
+	distinct := []string{
+		"breathin",
+		"breathin (Instrumental)",
+		"breathin' (Sad Version)",
+		"Holiday",
+		"Holiday (Live at Irving Plaza)",
+		"Holiday (Live at Dublin, Ireland)",
+	}
+
+	seen := map[string]string{}
+	for _, title := range distinct {
+		key := StrictMatchKey(title)
+		if previous, clash := seen[key]; clash {
+			t.Errorf("%q and %q share the strict key %q", previous, title, key)
+		}
+		seen[key] = title
+	}
+
+	// And the loose key must still collapse them, or catalogue matching breaks.
+	if NormalizeMatchKey("breathin (Instrumental)") != NormalizeMatchKey("breathin") {
+		t.Error("the loose key stopped collapsing versions; catalogue matching depends on it")
+	}
+}
+
+func TestStrictMatchKeyStillIgnoresCosmeticDifferences(t *testing.T) {
+	// Case, accents and punctuation are noise even for a strict comparison:
+	// the same recording tagged by two tools must still group.
+	groups := [][]string{
+		{"Me Enamoré", "Me enamore", "ME ENAMORÉ"},
+		{"Don't Start Now", "Dont Start Now", "Don’t Start Now"},
+		{"Fuck Tha Police", "Fuck  Tha   Police"},
+	}
+
+	for _, group := range groups {
+		want := StrictMatchKey(group[0])
+		for _, variant := range group[1:] {
+			if got := StrictMatchKey(variant); got != want {
+				t.Errorf("StrictMatchKey(%q) = %q, want %q", variant, got, want)
+			}
+		}
+	}
+}

@@ -25,6 +25,17 @@ type apiEnvelope struct {
 		SearchResult3 struct {
 			Song []songDTO `json:"song"`
 		} `json:"searchResult3"`
+		Playlists struct {
+			Playlist []struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+			} `json:"playlist"`
+		} `json:"playlists"`
+		Playlist struct {
+			Entry []struct {
+				ID string `json:"id"`
+			} `json:"entry"`
+		} `json:"playlist"`
 	} `json:"subsonic-response"`
 }
 
@@ -47,6 +58,8 @@ type songDTO struct {
 	Genre       string     `json:"genre"`
 	TrackNumber int        `json:"track"`
 	DiscNumber  int        `json:"discNumber"`
+	Created     string     `json:"created"`
+	Size        int64      `json:"size"`
 }
 
 type genreDTO struct {
@@ -65,6 +78,8 @@ func (s *songDTO) toSong() Song {
 		Genre:       s.firstGenre(),
 		TrackNumber: s.TrackNumber,
 		DiscNumber:  s.DiscNumber,
+		Created:     s.Created,
+		Size:        s.Size,
 		Year:        s.Year,
 		Duration:    s.Duration,
 		BitRate:     s.BitRate,

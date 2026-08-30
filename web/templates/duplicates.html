@@ -1,0 +1,16 @@
+{{define "content"}}
+<div class="page-header mb-6">
+    <h1 class="m-0">Duplicates</h1>
+    <p class="text-sm text-muted mt-2">
+        Files that look like copies of the same recording. Nothing is deleted unless you pick it.
+    </p>
+</div>
+
+<div class="toolbar-row mb-6">
+    <a class="btn btn-sm btn-outline" href="/library">&lsaquo; Music Library</a>
+</div>
+
+<div id="duplicates" hx-get="/htmx/duplicates" hx-trigger="load" hx-swap="innerHTML">
+    <p class="text-muted">Loading&hellip;</p>
+</div>
+{{end}}
